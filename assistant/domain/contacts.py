@@ -57,7 +57,10 @@ class Birthday(Field):
 class Contact:
     """Represents a contact in the system."""
 
-    def __init__(self, name: str):
+    def __init__(
+        self,
+        name: str,
+    ):
         self.name = Name(name)
         self.email: Email | None = None
         self.phones: list[Phone] = []
@@ -65,6 +68,8 @@ class Contact:
         self.birthday: Birthday | None = None
 
     def set_phone(self, phone: str) -> None:
+        if any(p.value == phone for p in self.phones):
+            raise ValueError(f"Phone number '{phone}' already exists for this contact.")
         self.phones.append(Phone(phone))
 
     def remove_phone(self, phone: str) -> None:
@@ -80,7 +85,7 @@ class Contact:
         self.birthday = Birthday(birthday)
 
     def __str__(self):
-        return f"{self.name}"
+        return f"{self.name} - Email: {self.email}, Phones: {[str(p) for p in self.phones]}, Address: {self.address}, Birthday: {self.birthday}"
 
 
 class ContactBook(UserDict):
@@ -94,7 +99,16 @@ class ContactBook(UserDict):
             raise KeyError(f"Contact '{name}' not found.")
         del self.data[name]
 
-    def find_contact(self, name: str) -> Contact | None:
-        if name not in self.data:
-            raise KeyError(f"Contact '{name}' not found.")
-        return self.data.get(name)
+    def find_contact(self, value: str) -> Contact | None:
+        if value in self.data:
+            return self.data[value]
+        for contact in self.data.values():
+            if contact.email and contact.email.value == value:
+                return contact
+            if any(phone.value == value for phone in contact.phones):
+                return contact
+            if contact.address and contact.address.value == value:
+                return contact
+            if contact.birthday and str(contact.birthday.value) == value:
+                return contact
+        raise KeyError(f"No contact found for key: {value}")
