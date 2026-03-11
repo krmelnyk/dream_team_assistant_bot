@@ -112,3 +112,17 @@ class ContactBook(UserDict):
             if contact.birthday and str(contact.birthday.value) == value:
                 return contact
         raise KeyError(f"No contact found for key: {value}")
+
+    def upcoming_birthdays(self, days: int) -> list[Contact]:
+        today = date.today()
+        upcoming = []
+        for contact in self.data.values():
+            if contact.birthday:
+                bday_this_year = contact.birthday.value.replace(year=today.year)
+                if bday_this_year < today:
+                    bday_this_year = bday_this_year.replace(year=today.year + 1)
+                if 0 <= (bday_this_year - today).days <= days:
+                    upcoming.append(contact)
+        if not upcoming:
+            raise ValueError(f"No upcoming birthdays in the next {days} days.")
+        return upcoming
