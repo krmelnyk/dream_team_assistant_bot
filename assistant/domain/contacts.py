@@ -95,19 +95,6 @@ class ContactBook(UserDict):
                 return contact
         raise KeyError(f"No contact found for key: {value}")
 
-    def edit_contact(self, name: str, **kwargs) -> None:
-        if name not in self.data:
-            raise KeyError(f"Contact '{name}' not found.")
-        contact = self.data[name]
-        for key, value in kwargs.items():
-            if key == "phone" and isinstance(value, tuple):
-                old_phone, new_phone = value
-                contact.change_phone(old_phone, new_phone)
-            elif hasattr(contact, f"set_{key}"):
-                getattr(contact, f"set_{key}")(value)
-            else:
-                raise ValueError(f"Invalid contact attribute: {key}")
-
     def upcoming_birthdays(self, days: int) -> list[Contact]:
         today = date.today()
         upcoming = []
@@ -122,21 +109,3 @@ class ContactBook(UserDict):
         if not upcoming:
             raise ValueError(f"No upcoming birthdays in the next {days} days.")
         return upcoming
-
-
-contact = Contact("Alice", "alice@example.com")
-contact.set_phone("+1234567890")
-contact.set_address("123 Main St")
-contact.set_birthday("1990-04-01")
-contact_book = ContactBook()
-contact_book.add_contact(contact)
-# print(contact_book.find_contact("Alice"))
-contact2 = Contact("Bob", "bob@example.com")
-contact2.set_phone("+0987654321")
-contact_book.add_contact(contact2)
-
-contact2.set_birthday("1990-03-15")
-# contact_book.edit_contact("Bob", email="bob.updated@example.com")
-# contact_book.edit_contact("Bob", phone="+1112223333")
-print(contact_book.find_contact("Bob"))
-# print(contact_book.upcoming_birthdays(120))
