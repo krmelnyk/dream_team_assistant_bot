@@ -3,86 +3,68 @@
 # TODO: add Contact entity and related value objects.
 
 import re
-from datetime import date
+from datetime import date, datetime
 from collections import UserDict
+from dataclasses import dataclass, field
+from typing import List
 
 
-class Field:
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return str(self.value)
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({self.value!r})"
+def validate_phone(phone: str) -> str:
+    cleaned = re.sub(r"[\s\-\(\)]", "", phone.strip())
+    if not re.fullmatch(r"\+?\d{7,15}", cleaned):
+        raise ValueError(f"Invalid phone number: {phone}")
+    return cleaned
 
 
-class Name(Field):
-    def __init__(self, value: str):
-        self.value = value.strip()
-        if not self.value:
-            raise ValueError("Name cannot be empty.")
+def validate_email(email: str) -> str:
+    email = email.strip()
+    pattern = re.compile(r"^[\w.+-]+@[\w-]+\.[\w.-]+$")
+    if not pattern.match(email):
+        raise ValueError(f"Invalid email: {email}")
+    return email
 
 
-class Email(Field):
-    PATTERN = re.compile(r"^[\w.+-]+@[\w-]+\.[\w.-]+$")
-
-    def __init__(self, value: str):
-        self.value = value.strip()
-        if self.value and not self.PATTERN.match(self.value):
-            raise ValueError(f"Invalid email: {self.value}")
-
-
-class Phone(Field):
-    def __init__(self, value: str):
-        cleaned = re.sub(r"[\s\-\(\)]", "", value.strip())
-        if not re.fullmatch(r"\+?\d{7,15}", cleaned):
-            raise ValueError(f"Invalid phone number: {value}")
-        self.value = cleaned
-
-
-class Address(Field):
-    def __init__(self, value: str):
-        self.value = value.strip()
-
-
-class Birthday(Field):
-    def __init__(self, value: date):
-        if value > date.today():
-            raise ValueError("Birthday cannot be in the future.")
-        self.value = value
-
-
+@dataclass
 class Contact:
     """Represents a contact in the system."""
 
-    def __init__(
-        self,
-        name: str,
-    ):
-        self.name = Name(name)
-        self.email: Email | None = None
-        self.phones: list[Phone] = []
-        self.address: Address | None = None
-        self.birthday: Birthday | None = None
+    name: str
+    email: str | None = None
+    phones: List[str] = field(default_factory=list)
+    address: str | None = None
+    birthday: str | None = None
 
     def set_phone(self, phone: str) -> None:
-        if any(p.value == phone for p in self.phones):
+        if any(p == phone for p in self.phones):
             raise ValueError(f"Phone number '{phone}' already exists for this contact.")
-        self.phones.append(Phone(phone))
+        validate_phone(phone)
+        self.phones.append(phone)
 
     def remove_phone(self, phone: str) -> None:
-        self.phones = [p for p in self.phones if p.value != phone]
+        self.phones = [p for p in self.phones if p != phone]
 
     def set_email(self, email: str) -> None:
-        self.email = Email(email)
+        self.email = validate_email(email)
 
     def set_address(self, address: str) -> None:
-        self.address = Address(address)
+        self.address = address
 
-    def set_birthday(self, birthday: date) -> None:
-        self.birthday = Birthday(birthday)
+    def set_birthday(self, birthday: str) -> None:
+        self.birthday = birthday
+
+    def change_phone(self, old_phone: str, new_phone: str) -> None:
+        if old_phone not in self.phones:
+            raise ValueError(f"Phone number '{old_phone}' not found for this contact.")
+        if any(p == new_phone for p in self.phones):
+            raise ValueError(
+                f"Phone number '{new_phone}' already exists for this contact."
+            )
+        validate_phone(new_phone)
+        self.phones = [new_phone if p == old_phone else p for p in self.phones]
+
+    def __post_init__(self):
+        if not self.name.strip():
+            raise ValueError("Contact name cannot be empty.")
 
     def __str__(self):
         return f"{self.name} - Email: {self.email}, Phones: {[str(p) for p in self.phones]}, Address: {self.address}, Birthday: {self.birthday}"
@@ -92,7 +74,7 @@ class ContactBook(UserDict):
     """A collection of contacts, indexed by name."""
 
     def add_contact(self, contact: Contact) -> None:
-        self.data[contact.name.value] = contact
+        self.data[contact.name] = contact
 
     def remove_contact(self, name: str) -> None:
         if name not in self.data:
@@ -103,22 +85,36 @@ class ContactBook(UserDict):
         if value in self.data:
             return self.data[value]
         for contact in self.data.values():
-            if contact.email and contact.email.value == value:
+            if contact.email and contact.email == value:
                 return contact
-            if any(phone.value == value for phone in contact.phones):
+            if any(phone == value for phone in contact.phones):
                 return contact
-            if contact.address and contact.address.value == value:
+            if contact.address and contact.address == value:
                 return contact
-            if contact.birthday and str(contact.birthday.value) == value:
+            if contact.birthday and str(contact.birthday) == value:
                 return contact
         raise KeyError(f"No contact found for key: {value}")
+
+    def edit_contact(self, name: str, **kwargs) -> None:
+        if name not in self.data:
+            raise KeyError(f"Contact '{name}' not found.")
+        contact = self.data[name]
+        for key, value in kwargs.items():
+            if key == "phone" and isinstance(value, tuple):
+                old_phone, new_phone = value
+                contact.change_phone(old_phone, new_phone)
+            elif hasattr(contact, f"set_{key}"):
+                getattr(contact, f"set_{key}")(value)
+            else:
+                raise ValueError(f"Invalid contact attribute: {key}")
 
     def upcoming_birthdays(self, days: int) -> list[Contact]:
         today = date.today()
         upcoming = []
         for contact in self.data.values():
             if contact.birthday:
-                bday_this_year = contact.birthday.value.replace(year=today.year)
+                bday = datetime.strptime(contact.birthday, "%Y-%m-%d").date()
+                bday_this_year = bday.replace(year=today.year)
                 if bday_this_year < today:
                     bday_this_year = bday_this_year.replace(year=today.year + 1)
                 if 0 <= (bday_this_year - today).days <= days:
@@ -126,3 +122,21 @@ class ContactBook(UserDict):
         if not upcoming:
             raise ValueError(f"No upcoming birthdays in the next {days} days.")
         return upcoming
+
+
+contact = Contact("Alice", "alice@example.com")
+contact.set_phone("+1234567890")
+contact.set_address("123 Main St")
+contact.set_birthday("1990-04-01")
+contact_book = ContactBook()
+contact_book.add_contact(contact)
+# print(contact_book.find_contact("Alice"))
+contact2 = Contact("Bob", "bob@example.com")
+contact2.set_phone("+0987654321")
+contact_book.add_contact(contact2)
+
+contact2.set_birthday("1990-03-15")
+# contact_book.edit_contact("Bob", email="bob.updated@example.com")
+# contact_book.edit_contact("Bob", phone="+1112223333")
+print(contact_book.find_contact("Bob"))
+# print(contact_book.upcoming_birthdays(120))
