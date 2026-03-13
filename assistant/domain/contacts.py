@@ -1,7 +1,5 @@
 """Contacts domain models and rules (skeleton)."""
 
-# TODO: add Contact entity and related value objects.
-
 import re
 from datetime import date, datetime
 from collections import UserDict
