@@ -9,6 +9,31 @@ class CLI:
     def __init__(self, contact_service, note_service) -> None:
         self.contact_service = contact_service
         self.note_service = note_service
+        self._startup_help = (
+            "Commands:\n"
+            "  hello - greet the assistant\n"
+            "  help - show this help message\n"
+            "  exit | close - quit the program\n"
+            "  contact all - show all contacts\n"
+            "  contact add <name> <phone> [email] [address] [birthday] - add a contact\n"
+            "  contact remove <name> - remove a contact\n"
+            "  contact find <value> - find a contact by name, email, phone, address, or birthday\n"
+            "  contact add_email <name> <email> - add or update email\n"
+            "  contact add_address <name> <address> - add or update address\n"
+            "  contact add_phone <name> <phone> - add another phone\n"
+            "  contact add_birthday <name> <YYYY-MM-DD> - add or update birthday\n"
+            "  contact edit <name> email|address|birthday <value> - edit a contact field\n"
+            "  contact edit <name> phone <old_phone> <new_phone> - change a phone number\n"
+            "  contact birthdays <days> - show upcoming birthdays\n"
+            "  note all - show all notes\n"
+            "  note add <title> <content> [tag ...] - add a note\n"
+            "  note remove <id> - remove a note\n"
+            "  note find <id> - show a note by id\n"
+            "  note edit <id> title=<value> [content=<value>] - edit a note\n"
+            "  note add_tag <id> <tag> - add a tag to a note\n"
+            "  note remove_tag <id> <tag> - remove a tag from a note\n"
+            "  note find_by_tag <tag> - find notes by tag"
+        )
 
         self.contact_handlers = {
             "all": self.contact_service.show_all_contacts,
@@ -44,6 +69,9 @@ class CLI:
         if section in ("close", "exit"):
             return "system", "exit", []
 
+        if section == "help":
+            return "system", "help", []
+
         if section == "hello":
             return "system", "hello", []
 
@@ -76,6 +104,8 @@ class CLI:
         section, command, args = self.parse_input(user_input)
 
         if section == "system":
+            if command == "help":
+                return self._startup_help
             if command == "hello":
                 return "How can I help you?"
             if command == "exit":
@@ -112,6 +142,7 @@ class CLI:
         print("Welcome to the assistant bot!")
         print("Available sections: contact, note")
         print("Type 'exit' or 'close' to quit.")
+        print(self._startup_help)
 
         while True:
             user_input = input(">>> ").strip()
