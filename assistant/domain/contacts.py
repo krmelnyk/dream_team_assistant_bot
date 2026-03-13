@@ -40,6 +40,21 @@ def validate_email(email: str) -> str:
     return email
 
 
+def validate_birthday(birthday: str) -> str:
+    birthday = birthday.strip()
+    try:
+        parsed = datetime.strptime(birthday, "%d-%m-%Y").date()
+    except ValueError as error:
+        raise ValueError(
+            f"Invalid birthday format: {birthday}. Use DD-MM-YYYY."
+        ) from error
+
+    if parsed > date.today():
+        raise ValueError(f"Birthday cannot be in the future: {birthday}")
+
+    return parsed.strftime("%d-%m-%Y")
+
+
 @dataclass
 class Contact:
     """Represents a contact in the system."""
@@ -67,7 +82,7 @@ class Contact:
         self.address = address
 
     def set_birthday(self, birthday: str) -> None:
-        self.birthday = birthday
+        self.birthday = validate_birthday(birthday)
 
     def change_phone(self, old_phone: str, new_phone: str) -> None:
         normalized_old_phone = validate_phone(old_phone)
@@ -135,7 +150,7 @@ class ContactBook(UserDict):
         upcoming = []
         for contact in self.data.values():
             if contact.birthday:
-                bday = datetime.strptime(contact.birthday, "%Y-%m-%d").date()
+                bday = datetime.strptime(contact.birthday, "%d-%m-%Y").date()
                 bday_this_year = bday.replace(year=today.year)
                 if bday_this_year < today:
                     bday_this_year = bday_this_year.replace(year=today.year + 1)
