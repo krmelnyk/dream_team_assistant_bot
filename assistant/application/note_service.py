@@ -20,6 +20,45 @@ class NoteService:
             return 1
         return max(book.data.keys()) + 1
 
+    def _parse_args(self, args: list[str]) -> list[str]:
+        if not args:
+            return []
+
+        raw_args = " ".join(args).strip()
+        if not raw_args:
+            return []
+
+        parsed: list[str] = []
+        current: list[str] = []
+        quote_char = ""
+
+        for char in raw_args:
+            if char in ('"', "'"):
+                if not quote_char:
+                    quote_char = char
+                    continue
+                if quote_char == char:
+                    quote_char = ""
+                    continue
+
+            if char.isspace() and not quote_char:
+                if current:
+                    parsed.append("".join(current))
+                    current = []
+                continue
+
+            current.append(char)
+
+        if quote_char:
+            raise ValueError(
+                "Invalid note command syntax: check quotes in arguments."
+            )
+
+        if current:
+            parsed.append("".join(current))
+
+        return parsed
+
     def show_all_notes(self) -> list[Note]:
         book = self._load_book()
         if not book.data:
@@ -27,6 +66,7 @@ class NoteService:
         return list(book.data.values())
 
     def find_note(self, args: list[str]) -> Note:
+        args = self._parse_args(args)
         book = self._load_book()
 
         if len(args) < 1:
@@ -40,6 +80,7 @@ class NoteService:
         return book.get_note(note_id)
 
     def add_note(self, args: list[str]) -> str:
+        args = self._parse_args(args)
         book = self._load_book()
 
         if len(args) < 2:
@@ -67,6 +108,7 @@ class NoteService:
         return "Note added successfully."
 
     def remove_note(self, args: list[str]) -> str:
+        args = self._parse_args(args)
         book = self._load_book()
 
         if len(args) < 1:
@@ -82,6 +124,7 @@ class NoteService:
         return "Note removed successfully."
 
     def add_tag(self, args: list[str]) -> str:
+        args = self._parse_args(args)
         book = self._load_book()
 
         if len(args) < 2:
@@ -100,6 +143,7 @@ class NoteService:
         return "Tag added successfully."
 
     def remove_tag(self, args: list[str]) -> str:
+        args = self._parse_args(args)
         book = self._load_book()
 
         if len(args) < 2:
@@ -118,6 +162,7 @@ class NoteService:
         return "Tag removed successfully."
 
     def find_notes_by_tag(self, args: list[str]) -> list[Note]:
+        args = self._parse_args(args)
         book = self._load_book()
 
         if len(args) < 1:
@@ -127,6 +172,7 @@ class NoteService:
         return book.find_notes_by_tag(tag_name)
 
     def edit_note(self, args: list[str]) -> str:
+        args = self._parse_args(args)
         book = self._load_book()
 
         if len(args) < 2:
