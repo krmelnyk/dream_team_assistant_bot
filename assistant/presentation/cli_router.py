@@ -12,7 +12,7 @@ class CLI:
         self._startup_help = (
             "Commands:\n"
             "  hello - greet the assistant\n"
-            "  help - show this help message\n"
+            "  help - show all bot commands\n"
             "  exit | close - quit the program\n"
             "  contact all - show all contacts\n"
             "  contact add <name> <phone> [email] [address] [birthday] - add a contact\n"
