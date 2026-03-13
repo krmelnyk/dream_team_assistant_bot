@@ -1,87 +1,163 @@
-"""Application service for notes (skeleton)."""
+"""Application service for notes."""
+
+from __future__ import annotations
 
 from ..domain.notes import Note, NotesBook, Tag
 
-def show_all_notes(notes_book: NotesBook) -> list[Note]:
-    """Return a list of all notes."""
-    if not notes_book.data:
-        raise ValueError("No notes found.")
-    return list(notes_book.data.values())
 
-def find_note(args, book: NotesBook):
-    if len(args) < 1:
-        raise ValueError("Note ID is required.")
-    note_id = args[0]
-    note = book.get_note(note_id)
-    return note
+class NoteService:
+    def __init__(self, repository) -> None:
+        self._repository = repository
 
-def add_note(args, book: NotesBook):
-    if len(args) < 2:
-        raise ValueError("Note title and content are required.")
-    title, content, *rest = args
-    if len(title.strip()) >= 100:
-        raise ValueError("Note title cannot exceed 100 characters.")
-    if len(content.strip()) >= 1000:
-        raise ValueError("Note content cannot exceed 1000 characters.")
-    note = Note(title, content)
-    if rest:
-        tag_names = rest
-        for tag_name in tag_names:
-            tag = Tag(tag_name)
-            note.add_tag(tag)
-    book.add_note(note)
-    return "Note added successfully."
+    def _load_book(self) -> NotesBook:
+        return self._repository.read()
 
+    def _save_book(self, book: NotesBook) -> None:
+        self._repository.write(book)
 
-def remove_note(args, book: NotesBook):
-    if len(args) < 1:
-        raise ValueError("Note ID is required.")
-    note_id = args[0]
-    book.remove_note(note_id)
-    return "Note removed successfully."
+    def _next_id(self, book: NotesBook) -> int:
+        if not book.data:
+            return 1
+        return max(book.data.keys()) + 1
 
-def add_tag(args, book: NotesBook):
-    if len(args) < 2:
-        raise ValueError("Note ID and tag name are required.")
-    note_id, tag_name = args
-    note = book.get_note(note_id)
-    tag = Tag(tag_name)
-    note.add_tag(tag)
-    return "Tag added successfully."
+    def show_all_notes(self) -> list[Note]:
+        book = self._load_book()
+        if not book.data:
+            raise ValueError("No notes found.")
+        return list(book.data.values())
 
-def remove_tag(args, book: NotesBook):
-    if len(args) < 2:
-        raise ValueError("Note ID and tag name are required.")
-    note_id, tag_name = args
-    note = book.get_note(note_id)
-    tag = Tag(tag_name)
-    note.remove_tag(tag)
-    return "Tag removed successfully."
+    def find_note(self, args: list[str]) -> Note:
+        book = self._load_book()
 
-def find_notes_by_tag(args, book: NotesBook):
-    if len(args) < 1:
-        raise ValueError("Tag name is required.")
-    tag_name = args[0]
-    notes = book.find_notes_by_tag(tag_name)
-    return notes
+        if len(args) < 1:
+            raise ValueError("Note ID is required.")
 
-def edit_note(args, book: NotesBook):
-    if len(args) < 2:
-        raise ValueError("Note ID and at least one field to edit are required.")
-    note_id = args[0]
-    note = book.get_note(note_id)
-    fields = args[1:]
-    for field in fields:
-        if '=' not in field:
-            raise ValueError(f"Invalid field format: '{field}'. Expected 'field=value'.")
-        key, value = field.split('=', 1)
-        key = key.strip().lower()
-        value = value.strip()
-        if key == 'title':
-            note.set_title(value)
-        elif key == 'content':
-            note.set_content(value)
-        else:
-            raise ValueError(f"Unknown field: '{key}'. Only 'title' and 'content' can be edited.")
-    return "Note edited successfully."
+        try:
+            note_id = int(args[0])
+        except ValueError as error:
+            raise ValueError("Note ID must be an integer.") from error
 
+        return book.get_note(note_id)
+
+    def add_note(self, args: list[str]) -> str:
+        book = self._load_book()
+
+        if len(args) < 2:
+            raise ValueError("Note title and content are required.")
+
+        title, content, *rest = args
+
+        if len(title.strip()) >= 100:
+            raise ValueError("Note title cannot exceed 100 characters.")
+        if len(content.strip()) >= 1000:
+            raise ValueError("Note content cannot exceed 1000 characters.")
+
+        note = Note(
+            id=self._next_id(book),
+            title=title.strip(),
+            content=content.strip(),
+        )
+
+        if rest:
+            for tag_name in rest:
+                note.add_tag(Tag(tag_name))
+
+        book.add_note(note)
+        self._save_book(book)
+        return "Note added successfully."
+
+    def remove_note(self, args: list[str]) -> str:
+        book = self._load_book()
+
+        if len(args) < 1:
+            raise ValueError("Note ID is required.")
+
+        try:
+            note_id = int(args[0])
+        except ValueError as error:
+            raise ValueError("Note ID must be an integer.") from error
+
+        book.remove_note(note_id)
+        self._save_book(book)
+        return "Note removed successfully."
+
+    def add_tag(self, args: list[str]) -> str:
+        book = self._load_book()
+
+        if len(args) < 2:
+            raise ValueError("Note ID and tag name are required.")
+
+        try:
+            note_id = int(args[0])
+        except ValueError as error:
+            raise ValueError("Note ID must be an integer.") from error
+
+        tag_name = args[1]
+        note = book.get_note(note_id)
+        note.add_tag(Tag(tag_name))
+
+        self._save_book(book)
+        return "Tag added successfully."
+
+    def remove_tag(self, args: list[str]) -> str:
+        book = self._load_book()
+
+        if len(args) < 2:
+            raise ValueError("Note ID and tag name are required.")
+
+        try:
+            note_id = int(args[0])
+        except ValueError as error:
+            raise ValueError("Note ID must be an integer.") from error
+
+        tag_name = args[1]
+        note = book.get_note(note_id)
+        note.remove_tag(Tag(tag_name))
+
+        self._save_book(book)
+        return "Tag removed successfully."
+
+    def find_notes_by_tag(self, args: list[str]) -> list[Note]:
+        book = self._load_book()
+
+        if len(args) < 1:
+            raise ValueError("Tag name is required.")
+
+        tag_name = args[0]
+        return book.find_notes_by_tag(tag_name)
+
+    def edit_note(self, args: list[str]) -> str:
+        book = self._load_book()
+
+        if len(args) < 2:
+            raise ValueError("Note ID and at least one field to edit are required.")
+
+        try:
+            note_id = int(args[0])
+        except ValueError as error:
+            raise ValueError("Note ID must be an integer.") from error
+
+        note = book.get_note(note_id)
+        fields = args[1:]
+
+        for field in fields:
+            if "=" not in field:
+                raise ValueError(
+                    f"Invalid field format: '{field}'. Expected 'field=value'."
+                )
+
+            key, value = field.split("=", 1)
+            key = key.strip().lower()
+            value = value.strip()
+
+            if key == "title":
+                note.set_title(value)
+            elif key == "content":
+                note.set_content(value)
+            else:
+                raise ValueError(
+                    f"Unknown field: '{key}'. Only 'title' and 'content' can be edited."
+                )
+
+        self._save_book(book)
+        return "Note edited successfully."
