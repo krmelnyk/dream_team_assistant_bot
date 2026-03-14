@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 from typing import Any, Callable, Generic, Protocol, TypeVar
+from ..domain.exceptions import StorageError
 
 
 T = TypeVar("T")
@@ -36,8 +37,11 @@ def read_json(path: str | Path, default: Any = None) -> Any:
     if file_path.stat().st_size == 0:
         return default
 
-    with file_path.open("r", encoding="utf-8") as handle:
-        return json.load(handle)
+    try:
+        with file_path.open("r", encoding="utf-8") as handle:
+            return json.load(handle)
+    except Exception as error:
+        raise StorageError("Failed to read JSON data.") from error
 
 
 def write_json(path: str | Path, payload: Any) -> None:
@@ -48,10 +52,14 @@ def write_json(path: str | Path, payload: Any) -> None:
 
     temp_path = file_path.with_name(f".{file_path.name}.tmp")
 
-    with temp_path.open("w", encoding="utf-8") as handle:
-        json.dump(payload, handle, ensure_ascii=False, indent=2)
+    try:
+        with temp_path.open("w", encoding="utf-8") as handle:
+            json.dump(payload, handle, ensure_ascii=False, indent=2)
 
-    os.replace(temp_path, file_path)
+        os.replace(temp_path, file_path)
+
+    except Exception as error:
+        raise StorageError("Failed to write JSON data.") from error
 
 
 class JsonFileStorage(Generic[T]):
@@ -75,11 +83,17 @@ class JsonFileStorage(Generic[T]):
         return self._path
 
     def read(self) -> T:
-        payload = read_json(self._path, default=None)
-        if payload is None:
-            return self._default_factory()
-        return self._decoder(payload)
+        try:
+            payload = read_json(self._path, default=None)
+            if payload is None:
+                return self._default_factory()
+            return self._decoder(payload)
+        except Exception as error:
+            raise StorageError("Failed to load data from storage.") from error
 
     def write(self, value: T) -> None:
-        payload = self._encoder(value)
-        write_json(self._path, payload)
+        try:
+            payload = self._encoder(value)
+            write_json(self._path, payload)
+        except Exception as error:
+            raise StorageError("Failed to save data to storage.") from error
