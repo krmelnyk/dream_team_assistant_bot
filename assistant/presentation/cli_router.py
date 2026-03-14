@@ -4,6 +4,8 @@ from __future__ import annotations
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
 from colorama import Fore, Style
+from rich.console import Console
+from rich.table import Table
 
 from ..domain.exceptions import ERROR_PREFIX, input_error
 
@@ -22,32 +24,7 @@ class CLI:
     def __init__(self, contact_service, note_service) -> None:
         self.contact_service = contact_service
         self.note_service = note_service
-        self._startup_help = (
-            "Commands:\n"
-            "  hello - greet the assistant\n"
-            "  help - show all bot commands\n"
-            "  exit | close - quit the program\n"
-            "  contact all - show all contacts\n"
-            "  contact add <name> <phone> [email] [address] [birthday] - add a contact\n"
-            "  contact remove <name> - remove a contact\n"
-            "  contact find <value> - find a contact by name, email, phone, address, or birthday\n"
-            "  contact add_email <name> <email> - add or update email\n"
-            "  contact add_address <name> <address> - add or update address\n"
-            "  contact add_phone <name> <phone> - add another phone\n"
-            "  contact add_birthday <name> <DD-MM-YYYY> - add or update birthday\n"
-            "  contact edit <name> email|address|birthday <value> - edit a contact field\n"
-            "  contact edit <name> phone <old_phone> <new_phone> - change a phone number\n"
-            "  contact birthdays <days> - show upcoming birthdays\n"
-            "  note all - show all notes\n"
-            "  note add \"<title>\" \"<content>\" [tag ...] - add a note\n"
-            "  note remove <id> - remove a note\n"
-            "  note find <id> - show a note by id\n"
-            "  note edit <id> title=\"<value>\" content=\"<value>\" - edit a note\n"
-            "  note add_tag <id> <tag> - add a tag to a note\n"
-            "  note remove_tag <id> <tag> - remove a tag from a note\n"
-            "  note find_by_tag <tag> - find notes by tag\n"
-            "  note sort_by_tags - sort notes by tags"
-        )
+        self.console = Console()
 
         self.contact_handlers = {
             "all": self.contact_service.show_all_contacts,
@@ -74,6 +51,42 @@ class CLI:
             "sort_by_tags": self.note_service.sort_notes_by_tags,
         }
 
+    def _print_help_table(self) -> None:
+        table = Table(title="Available Commands", show_lines=False)
+        table.add_column("Command", style="cyan", no_wrap=True)
+        table.add_column("Description", style="white")
+
+        rows = [
+            ("hello", "greet the assistant"),
+            ("help", "show all bot commands"),
+            ("exit | close", "quit the program"),
+            ("contact all", "show all contacts"),
+            ("contact add <name> <phone> [email] [address] [birthday]", "add a contact"),
+            ("contact remove <name>", "remove a contact"),
+            ("contact find <value>", "find by name, email, phone, address or birthday"),
+            ("contact add_email <name> <email>", "add or update email"),
+            ("contact add_address <name> <address>", "add or update address"),
+            ("contact add_phone <name> <phone>", "add another phone"),
+            ("contact add_birthday <name> <DD-MM-YYYY>", "add or update birthday"),
+            ("contact edit <name> email|address|birthday <value>", "edit a contact field"),
+            ("contact edit <name> phone <old> <new>", "change a phone number"),
+            ("contact birthdays <days>", "show upcoming birthdays"),
+            ("note all", "show all notes"),
+            ("note add <title> <content> [tag ...]", "add a note"),
+            ("note remove <id>", "remove a note"),
+            ("note find <id>", "show a note by id"),
+            ("note edit <id> title=<value> [content=<value>]", "edit a note"),
+            ("note add_tag <id> <tag>", "add a tag to a note"),
+            ("note remove_tag <id> <tag>", "remove a tag from a note"),
+            ("note find_by_tag <tag>", "find notes by tag"),
+            ("note sort_by_tags", "sort notes by tags"),
+        ]
+
+        for command, description in rows:
+            table.add_row(command, description)
+
+        self.console.print(table)
+
     def _is_success_message(self, message: str) -> bool:
         normalized = message.strip().lower()
         success_endings = (
@@ -92,6 +105,12 @@ class CLI:
             "unknown command. use 'contact <command>' or 'note <command>'.",
         }
         return normalized in info_messages
+
+    def _is_contact_like(self, value: object) -> bool:
+        return hasattr(value, "name") and hasattr(value, "phones")
+
+    def _is_note_like(self, value: object) -> bool:
+        return hasattr(value, "title") and hasattr(value, "content")
 
     def parse_input(self, user_input: str) -> tuple[str, str, list[str]]:
         parts = user_input.strip().split()
@@ -133,13 +152,71 @@ class CLI:
 
         return str(result)
 
+    def _print_contacts_table(self, contacts: list[object]) -> None:
+        table = Table(title="Contacts", show_lines=False)
+        table.add_column("Name", style="cyan", no_wrap=True)
+        table.add_column("Phones", style="magenta")
+        table.add_column("Email", style="green")
+        table.add_column("Address", style="yellow")
+        table.add_column("Birthday", style="blue")
+
+        for contact in contacts:
+            phones = getattr(contact, "phones", [])
+            table.add_row(
+                str(getattr(contact, "name", "-")),
+                ", ".join(phones) if phones else "-",
+                str(getattr(contact, "email", "-") or "-"),
+                str(getattr(contact, "address", "-") or "-"),
+                str(getattr(contact, "birthday", "-") or "-"),
+            )
+
+        self.console.print(table)
+
+    def _print_notes_table(self, notes: list[object]) -> None:
+        table = Table(title="Notes", show_lines=False)
+        table.add_column("ID", style="cyan", no_wrap=True)
+        table.add_column("Title", style="green")
+        table.add_column("Content")
+        table.add_column("Tags", style="magenta")
+
+        for note in notes:
+            tags = getattr(note, "tags", [])
+            table.add_row(
+                str(getattr(note, "id", "-")),
+                str(getattr(note, "title", "-")),
+                str(getattr(note, "content", "-")),
+                ", ".join(getattr(tag, "name", str(tag)) for tag in tags)
+                if tags
+                else "-",
+            )
+
+        self.console.print(table)
+
+    def _print_list_result(self, result: list[object]) -> None:
+        if not result:
+            print("No records found.")
+            return
+
+        first_item = result[0]
+        if self._is_contact_like(first_item):
+            self._print_contacts_table(result)
+            return
+
+        if self._is_note_like(first_item):
+            self._print_notes_table(result)
+            return
+
+        for item in result:
+            print(item)
+
     @input_error
-    def dispatch(self, user_input: str) -> str:
+    def dispatch(self, user_input: str):
         section, command, args = self.parse_input(user_input)
 
         if section == "system":
             if command == "help":
-                return self._startup_help
+                self._print_help_table()
+                return None
             if command == "hello":
                 return "How can I help you?"
             if command == "exit":
@@ -157,8 +234,14 @@ class CLI:
             if handler is None:
                 raise ValueError(f"Unknown contact command: '{command}'.")
             if command == "all":
-                return self.format_result(handler())
-            return self.format_result(handler(args))
+                return handler()
+
+            result = handler(args)
+            if isinstance(result, list):
+                return result
+            if self._is_contact_like(result) or self._is_note_like(result):
+                return result
+            return self.format_result(result)
 
         if section == "note":
             if not command:
@@ -167,19 +250,29 @@ class CLI:
             if handler is None:
                 raise ValueError(f"Unknown note command: '{command}'.")
             if command == "all":
-                return self.format_result(handler())
-            return self.format_result(handler(args))
+                return handler()
+
+            result = handler(args)
+            if isinstance(result, list):
+                return result
+            if self._is_contact_like(result) or self._is_note_like(result):
+                return result
+            return self.format_result(result)
 
         return "Unknown command."
 
     def run(self) -> None:
-        print("Welcome to the assistant bot!")
-        print("Available sections: contact, note")
-        print("Type 'exit' or 'close' to quit.")
-        print(self._startup_help)
+        self.console.print("Welcome to the assistant bot!", style="bold")
+        self.console.print("Available sections: [cyan]contact[/cyan], [cyan]note[/cyan]")
+        self.console.print("Type '[cyan]exit[/cyan]' or '[cyan]close[/cyan]' to quit.")
+        self._print_help_table()
         
-        all_comands = list(self.contact_handlers.keys()) + list(self.note_handlers.keys()) + ["contact", "note", "hello", "help", "exit", "close"]
-        completer = HintsCompleter(hints=all_comands)
+        all_commands = list(dict.fromkeys(
+            list(self.contact_handlers.keys())
+            + list(self.note_handlers.keys())
+            + ["contact", "note", "hello", "help", "exit", "close"]
+        ))
+        completer = HintsCompleter(hints=all_commands)
         session = PromptSession(completer=completer)
 
         while True:
@@ -188,13 +281,21 @@ class CLI:
                 continue
 
             result = self.dispatch(user_input)
-            if isinstance(result, str) and result.startswith(ERROR_PREFIX):
+            if result is None:
+                pass
+            elif isinstance(result, str) and result.startswith(ERROR_PREFIX):
                 message = result[len(ERROR_PREFIX):]
                 print(f"{Fore.RED}{message}{Style.RESET_ALL}")
             elif isinstance(result, str) and self._is_success_message(result):
                 print(f"{Fore.GREEN}{result}{Style.RESET_ALL}")
             elif isinstance(result, str) and self._is_info_message(result):
                 print(f"{Fore.YELLOW}{result}{Style.RESET_ALL}")
+            elif isinstance(result, list):
+                self._print_list_result(result)
+            elif self._is_contact_like(result):
+                self._print_contacts_table([result])
+            elif self._is_note_like(result):
+                self._print_notes_table([result])
             else:
                 print(result)
 
