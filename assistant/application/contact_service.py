@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from ..domain.contacts import Contact, ContactBook
+from ..domain.exceptions import CommandError
 
 
 class ContactService:
@@ -18,14 +19,14 @@ class ContactService:
     def show_all_contacts(self) -> list[Contact]:
         book = self._load_book()
         if not book.data:
-            raise ValueError("No contacts found.")
+            raise CommandError("No contacts found.")
         return list(book.data.values())
 
     def add_contact(self, args: list[str]) -> str:
         book = self._load_book()
 
         if len(args) < 2:
-            raise ValueError("Contact name and phone are required.")
+            raise CommandError("Contact name and phone are required.")
 
         name, phone, *rest = args
         contact = Contact(name)
@@ -49,7 +50,7 @@ class ContactService:
         book = self._load_book()
 
         if len(args) < 1:
-            raise ValueError("Contact name is required.")
+            raise CommandError("Contact name is required.")
 
         name = args[0]
         book.remove_contact(name)
@@ -60,7 +61,7 @@ class ContactService:
         book = self._load_book()
 
         if len(args) < 2:
-            raise ValueError("Contact name and birthday are required.")
+            raise CommandError("Contact name and birthday are required.")
 
         name, birthday = args
         contact = book.find_contact(name)
@@ -73,7 +74,7 @@ class ContactService:
         book = self._load_book()
 
         if len(args) < 2:
-            raise ValueError("Contact name and email are required.")
+            raise CommandError("Contact name and email are required.")
 
         name, email = args
         contact = book.find_contact(name)
@@ -86,7 +87,7 @@ class ContactService:
         book = self._load_book()
 
         if len(args) < 2:
-            raise ValueError("Contact name and address are required.")
+            raise CommandError("Contact name and address are required.")
 
         name, address = args
         contact = book.find_contact(name)
@@ -99,7 +100,7 @@ class ContactService:
         book = self._load_book()
 
         if len(args) < 2:
-            raise ValueError("Contact name and phone are required.")
+            raise CommandError("Contact name and phone are required.")
 
         name, phone = args
         contact = book.find_contact(name)
@@ -112,7 +113,7 @@ class ContactService:
         book = self._load_book()
 
         if len(args) < 3:
-            raise ValueError("Contact name, field, and new value are required.")
+            raise CommandError("Contact name, field, and new value are required.")
 
         if len(args) == 4:
             name, field, old_value, new_value = args
@@ -133,7 +134,7 @@ class ContactService:
         elif field == "birthday":
             contact.set_birthday(new_value)
         else:
-            raise ValueError(f"Unknown field '{field}'.")
+            raise CommandError(f"Unknown field '{field}'.")
 
         self._save_book(book)
         return "Contact updated successfully."
@@ -142,7 +143,7 @@ class ContactService:
         book = self._load_book()
 
         if len(args) < 1:
-            raise ValueError("Search value is required.")
+            raise CommandError("Search value is required.")
 
         value = args[0]
         return book.find_contact(value)
@@ -151,11 +152,11 @@ class ContactService:
         book = self._load_book()
 
         if len(args) < 1:
-            raise ValueError("Number of days is required.")
+            raise CommandError("Number of days is required.")
 
         try:
             days = int(args[0])
         except ValueError as error:
-            raise ValueError("Number of days must be an integer.") from error
+            raise CommandError("Number of days must be an integer.") from error
 
         return book.upcoming_birthdays(days)

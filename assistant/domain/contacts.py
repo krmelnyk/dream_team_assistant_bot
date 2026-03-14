@@ -5,6 +5,7 @@ from datetime import date, datetime
 from collections import UserDict
 from dataclasses import dataclass, field
 from typing import List
+from .exceptions import ValidationError, NotFoundError
 
 
 def normalize_phone(phone: str) -> str:
@@ -20,10 +21,10 @@ def normalize_phone(phone: str) -> str:
     elif raw.startswith("+"):
         normalized = f"+{digits}"
     else:
-        raise ValueError(f"Invalid phone number: {phone}")
+        raise ValidationError(f"Invalid phone number: {phone}")
 
     if not re.fullmatch(r"\+\d{7,15}", normalized):
-        raise ValueError(f"Invalid phone number: {phone}")
+        raise ValidationError(f"Invalid phone number: {phone}")
 
     return normalized
 
@@ -36,7 +37,7 @@ def validate_email(email: str) -> str:
     email = email.strip()
     pattern = re.compile(r"^[\w.+-]+@[\w-]+\.[\w.-]+$")
     if not pattern.match(email):
-        raise ValueError(f"Invalid email: {email}")
+        raise ValidationError(f"Invalid email: {email}")
     return email
 
 
@@ -45,12 +46,12 @@ def validate_birthday(birthday: str) -> str:
     try:
         parsed = datetime.strptime(birthday, "%d-%m-%Y").date()
     except ValueError as error:
-        raise ValueError(
+        raise ValidationError(
             f"Invalid birthday format: {birthday}. Use DD-MM-YYYY."
         ) from error
 
     if parsed > date.today():
-        raise ValueError(f"Birthday cannot be in the future: {birthday}")
+        raise ValidationError(f"Birthday cannot be in the future: {birthday}")
 
     return parsed.strftime("%d-%m-%Y")
 
@@ -68,7 +69,7 @@ class Contact:
     def set_phone(self, phone: str) -> None:
         normalized_phone = validate_phone(phone)
         if normalized_phone in self.phones:
-            raise ValueError(f"Phone number '{phone}' already exists for this contact.")
+            raise ValidationError(f"Phone number '{phone}' already exists for this contact.")
         self.phones.append(normalized_phone)
 
     def remove_phone(self, phone: str) -> None:
@@ -89,12 +90,12 @@ class Contact:
         normalized_new_phone = validate_phone(new_phone)
 
         if normalized_old_phone not in self.phones:
-            raise ValueError(f"Phone number '{old_phone}' not found for this contact.")
+            raise ValidationError(f"Phone number '{old_phone}' not found for this contact.")
         if (
             normalized_new_phone in self.phones
             and normalized_new_phone != normalized_old_phone
         ):
-            raise ValueError(
+            raise ValidationError(
                 f"Phone number '{new_phone}' already exists for this contact."
             )
 
@@ -106,7 +107,7 @@ class Contact:
     def __post_init__(self):
         self.name = self.name.strip()
         if not self.name:
-            raise ValueError("Contact name cannot be empty.")
+            raise ValidationError("Contact name cannot be empty.")
         self.phones = [validate_phone(phone) for phone in self.phones]
 
     def __str__(self):
@@ -121,7 +122,7 @@ class ContactBook(UserDict):
 
     def remove_contact(self, name: str) -> None:
         if name not in self.data:
-            raise KeyError(f"Contact '{name}' not found.")
+            raise NotFoundError(f"Contact '{name}' not found.")
         del self.data[name]
 
     def find_contact(self, value: str) -> Contact | None:
@@ -131,7 +132,7 @@ class ContactBook(UserDict):
         normalized_value = value
         try:
             normalized_value = validate_phone(value)
-        except ValueError:
+        except ValidationError:
             pass
 
         for contact in self.data.values():
@@ -143,7 +144,7 @@ class ContactBook(UserDict):
                 return contact
             if contact.birthday and str(contact.birthday) == value:
                 return contact
-        raise KeyError(f"No contact found for key: {value}")
+        raise NotFoundError(f"No contact found for key: {value}")
 
     def upcoming_birthdays(self, days: int) -> list[Contact]:
         today = date.today()
@@ -157,5 +158,5 @@ class ContactBook(UserDict):
                 if 0 <= (bday_this_year - today).days <= days:
                     upcoming.append(contact)
         if not upcoming:
-            raise ValueError(f"No upcoming birthdays in the next {days} days.")
+            raise ValidationError(f"No upcoming birthdays in the next {days} days.")
         return upcoming
