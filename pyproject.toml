@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dream-team-assistant-bot"
+version = "0.1.0"
+description = "Console-based personal assistant for managing contacts and notes."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "colorama==0.4.6",
+    "markdown-it-py==4.0.0",
+    "mdurl==0.1.2",
+    "prompt_toolkit==3.0.52",
+    "Pygments==2.19.2",
+    "rich==14.3.3",
+    "wcwidth==0.2.6",
+]
+
+[project.scripts]
+personal-assistant = "main:main"
+
+[tool.setuptools]
+packages = [
+    "assistant",
+    "assistant.application",
+    "assistant.domain",
+    "assistant.infrastructure",
+    "assistant.presentation",
+]

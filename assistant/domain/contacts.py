@@ -1,4 +1,4 @@
-"""Contacts domain models and rules (skeleton)."""
+"""Contacts domain models and rules."""
 
 import re
 from datetime import date, datetime
@@ -12,6 +12,8 @@ def normalize_phone(phone: str) -> str:
     raw = phone.strip()
     digits = re.sub(r"\D", "", raw)
 
+    # Accept the most common local and international Ukrainian formats
+    # and normalize everything to a single +XXXXXXXXXXX representation.
     if len(digits) == 10 and digits.startswith("0"):
         normalized = f"+38{digits}"
     
@@ -153,6 +155,8 @@ class ContactBook(UserDict):
             if contact.birthday:
                 bday = datetime.strptime(contact.birthday, "%d-%m-%Y").date()
                 bday_this_year = bday.replace(year=today.year)
+                # If the birthday already passed this year, compare against
+                # the next occurrence in the following year.
                 if bday_this_year < today:
                     bday_this_year = bday_this_year.replace(year=today.year + 1)
                 if 0 <= (bday_this_year - today).days <= days:

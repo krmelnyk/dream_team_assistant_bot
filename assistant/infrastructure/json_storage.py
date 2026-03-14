@@ -7,6 +7,8 @@ import os
 from pathlib import Path
 from typing import Any, Callable, Generic, Protocol, TypeVar
 
+from ..domain.exceptions import StorageError
+
 
 T = TypeVar("T")
 
@@ -36,22 +38,38 @@ def read_json(path: str | Path, default: Any = None) -> Any:
     if file_path.stat().st_size == 0:
         return default
 
-    with file_path.open("r", encoding="utf-8") as handle:
-        return json.load(handle)
+    try:
+        with file_path.open("r", encoding="utf-8") as handle:
+            return json.load(handle)
+    except json.JSONDecodeError as error:
+        raise StorageError(
+            f"Invalid JSON in '{file_path.name}'. Please fix or remove the file."
+        ) from error
+    except OSError as error:
+        raise StorageError(
+            f"Unable to read data file '{file_path.name}'."
+        ) from error
 
 
 def write_json(path: str | Path, payload: Any) -> None:
     """Persist JSON to disk using atomic replace."""
 
     file_path = Path(path)
-    file_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        file_path.parent.mkdir(parents=True, exist_ok=True)
 
-    temp_path = file_path.with_name(f".{file_path.name}.tmp")
+        # Write into a temporary file first to avoid leaving a half-written
+        # JSON file behind if the process is interrupted.
+        temp_path = file_path.with_name(f".{file_path.name}.tmp")
 
-    with temp_path.open("w", encoding="utf-8") as handle:
-        json.dump(payload, handle, ensure_ascii=False, indent=2)
+        with temp_path.open("w", encoding="utf-8") as handle:
+            json.dump(payload, handle, ensure_ascii=False, indent=2)
 
-    os.replace(temp_path, file_path)
+        os.replace(temp_path, file_path)
+    except OSError as error:
+        raise StorageError(
+            f"Unable to write data file '{file_path.name}'."
+        ) from error
 
 
 class JsonFileStorage(Generic[T]):

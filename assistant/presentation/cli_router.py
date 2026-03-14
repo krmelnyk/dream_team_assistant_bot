@@ -1,6 +1,7 @@
 """CLI routing and command dispatch."""
 
 from __future__ import annotations
+from difflib import get_close_matches
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
 from colorama import Fore, Style
@@ -44,6 +45,7 @@ class CLI:
             "add": self.note_service.add_note,
             "remove": self.note_service.remove_note,
             "find": self.note_service.find_note,
+            "find_text": self.note_service.find_notes_by_text,
             "edit": self.note_service.edit_note,
             "add_tag": self.note_service.add_tag,
             "remove_tag": self.note_service.remove_tag,
@@ -57,29 +59,51 @@ class CLI:
         table.add_column("Description", style="white")
 
         rows = [
-            ("hello", "greet the assistant"),
-            ("help", "show all bot commands"),
+            ("hello", "show a greeting"),
+            ("help", "show all available commands"),
             ("exit | close", "quit the program"),
-            ("contact all", "show all contacts"),
-            ("contact add <name> <phone> [email] [address] [birthday]", "add a contact"),
-            ("contact remove <name>", "remove a contact"),
-            ("contact find <value>", "find by name, email, phone, address or birthday"),
-            ("contact add_email <name> <email>", "add or update email"),
-            ("contact add_address <name> <address>", "add or update address"),
-            ("contact add_phone <name> <phone>", "add another phone"),
-            ("contact add_birthday <name> <DD-MM-YYYY>", "add or update birthday"),
-            ("contact edit <name> email|address|birthday <value>", "edit a contact field"),
-            ("contact edit <name> phone <old> <new>", "change a phone number"),
-            ("contact birthdays <days>", "show upcoming birthdays"),
-            ("note all", "show all notes"),
-            ("note add <title> <content> [tag ...]", "add a note"),
-            ("note remove <id>", "remove a note"),
-            ("note find <id>", "show a note by id"),
-            ("note edit <id> title=<value> [content=<value>]", "edit a note"),
+            ("contact all", "show all saved contacts"),
+            (
+                "contact add <name> <phone> [email] [address] [birthday]",
+                "add a contact with optional email, address, and birthday",
+            ),
+            ("contact remove <name>", "remove a contact by name"),
+            (
+                "contact find <value>",
+                "find a contact by name, email, phone, address, or birthday",
+            ),
+            ("contact add_email <name> <email>", "add or update a contact email"),
+            ("contact add_address <name> <address>", "add or update a contact address"),
+            ("contact add_phone <name> <phone>", "add another phone number"),
+            ("contact add_birthday <name> <DD-MM-YYYY>", "add or update a birthday"),
+            (
+                "contact edit <name> email|address|birthday <value>",
+                "edit one contact field",
+            ),
+            (
+                "contact edit <name> phone <old> <new>",
+                "replace one phone number with another",
+            ),
+            ("contact birthdays <days>", "show birthdays within the next N days"),
+            ("note all", "show all saved notes"),
+            (
+                'note add "<title>" "<content>" [tag ...]',
+                "add a note; use quotes for multi-word title or content",
+            ),
+            ("note remove <id>", "remove a note by id"),
+            ("note find <id>", "show one note by id"),
+            (
+                "note find_text <query>",
+                "find notes whose title or content contains the query",
+            ),
+            (
+                "note edit <id> title=<value> [content=<value>]",
+                "edit note title and/or content; quote multi-word values",
+            ),
             ("note add_tag <id> <tag>", "add a tag to a note"),
             ("note remove_tag <id> <tag>", "remove a tag from a note"),
-            ("note find_by_tag <tag>", "find notes by tag"),
-            ("note sort_by_tags", "sort notes by tags"),
+            ("note find_by_tag <tag>", "find notes by exact tag name"),
+            ("note sort_by_tags", "sort notes by tag set"),
         ]
 
         for command, description in rows:
@@ -112,7 +136,13 @@ class CLI:
     def _is_note_like(self, value: object) -> bool:
         return hasattr(value, "title") and hasattr(value, "content")
 
+    def _suggest_command(self, value: str, options: list[str]) -> str | None:
+        matches = get_close_matches(value, options, n=1, cutoff=0.6)
+        return matches[0] if matches else None
+
     def parse_input(self, user_input: str) -> tuple[str, str, list[str]]:
+        # Keep routing simple: split into top-level section/command here and
+        # let service methods handle command-specific argument parsing.
         parts = user_input.strip().split()
         if not parts:
             return "", "", []
@@ -223,15 +253,29 @@ class CLI:
                 return "Good bye!"
 
         if not section:
-            return (
-                "Unknown command. Use 'contact <command>' or 'note <command>'."
+            unknown_value = user_input.strip().split()[0]
+            suggestion = self._suggest_command(
+                unknown_value,
+                ["contact", "note", "hello", "help", "exit", "close"],
             )
+            if suggestion:
+                raise CommandError(
+                    f"Unknown command: '{unknown_value}'. Did you mean '{suggestion}'?"
+                )
+            return "Unknown command. Use 'contact <command>' or 'note <command>'."
 
         if section == "contact":
             if not command:
                 raise CommandError("Contact command is required.")
             handler = self.contact_handlers.get(command)
             if handler is None:
+                suggestion = self._suggest_command(
+                    command, list(self.contact_handlers.keys())
+                )
+                if suggestion:
+                    raise CommandError(
+                        f"Unknown contact command: '{command}'. Did you mean '{suggestion}'?"
+                    )
                 raise CommandError(f"Unknown contact command: '{command}'.")
             if command == "all":
                 return handler()
@@ -248,6 +292,13 @@ class CLI:
                 raise CommandError("Note command is required.")
             handler = self.note_handlers.get(command)
             if handler is None:
+                suggestion = self._suggest_command(
+                    command, list(self.note_handlers.keys())
+                )
+                if suggestion:
+                    raise CommandError(
+                        f"Unknown note command: '{command}'. Did you mean '{suggestion}'?"
+                    )
                 raise CommandError(f"Unknown note command: '{command}'.")
             if command == "all":
                 return handler()
@@ -267,6 +318,8 @@ class CLI:
         self.console.print("Type '[cyan]exit[/cyan]' or '[cyan]close[/cyan]' to quit.")
         self._print_help_table()
         
+        # De-duplicate while preserving insertion order so autocomplete stays
+        # predictable for the user.
         all_commands = list(dict.fromkeys(
             list(self.contact_handlers.keys())
             + list(self.note_handlers.keys())

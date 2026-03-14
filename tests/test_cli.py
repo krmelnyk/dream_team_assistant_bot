@@ -46,6 +46,9 @@ class DummyNoteService:
     def find_note(self, args):
         return "Note 1"
 
+    def find_notes_by_text(self, args):
+        return ["Note 1"]
+
     def edit_note(self, args):
         return f"note edited: {args}"
 

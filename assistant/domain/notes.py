@@ -1,4 +1,4 @@
-"""Notes domain models and rules (skeleton)."""
+"""Notes domain models and rules."""
 
 from dataclasses import dataclass, field
 from collections import UserDict
@@ -85,11 +85,29 @@ class NotesBook(UserDict):
             raise NotFoundError(f"No notes found with tag '{tag_name}'.")
         return matched_notes
 
+    def find_notes_by_text(self, query: str) -> list[Note]:
+        query = query.strip()
+        if not query:
+            raise ValidationError("Search query cannot be empty.")
+
+        normalized_query = query.casefold()
+        # casefold() keeps the search user-friendly for mixed-case input.
+        matched_notes = [
+            note for note in self.data.values()
+            if normalized_query in note.title.casefold()
+            or normalized_query in note.content.casefold()
+        ]
+        if not matched_notes:
+            raise NotFoundError(f"No notes found matching '{query}'.")
+        return matched_notes
+
     def sort_notes_by_tags(self) -> list[Note]:
         if not self.data:
-            raise ValidationError("No notes found.")
+            raise NotFoundError("No notes found.")
 
         def sort_key(note: Note) -> tuple[bool, tuple[str, ...], int]:
+            # Notes without tags are pushed to the end; the rest are sorted
+            # by normalized tag set and then by id for deterministic output.
             normalized_tags = tuple(sorted(tag.name.lower() for tag in note.tags))
             return (len(normalized_tags) == 0, normalized_tags, note.id)
 

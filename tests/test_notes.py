@@ -151,10 +151,10 @@ def test_sort_notes_by_tags():
     assert [note.id for note in result] == [2, 1, 3]
 
 
-def test_sort_notes_by_tags_empty_book_raises_validation_error():
+def test_sort_notes_by_tags_empty_book_raises_not_found():
     book = NotesBook()
 
-    with pytest.raises(ValidationError):
+    with pytest.raises(NotFoundError):
         book.sort_notes_by_tags()
 
 

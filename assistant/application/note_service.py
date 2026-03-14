@@ -33,6 +33,8 @@ class NoteService:
         current: list[str] = []
         quote_char = ""
 
+        # Notes support multi-word titles/content inside quotes, so this
+        # parser keeps quoted chunks together before service-level handling.
         for char in raw_args:
             if char in ('"', "'"):
                 if not quote_char:
@@ -171,6 +173,16 @@ class NoteService:
 
         tag_name = args[0]
         return book.find_notes_by_tag(tag_name)
+
+    def find_notes_by_text(self, args: list[str]) -> list[Note]:
+        args = self._parse_args(args)
+        book = self._load_book()
+
+        if not args:
+            raise CommandError("Search query is required.")
+
+        query = " ".join(args).strip()
+        return book.find_notes_by_text(query)
 
     def sort_notes_by_tags(self, args: list[str]) -> list[Note]:
         args = self._parse_args(args)
