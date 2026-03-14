@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from colorama import init
 
 from assistant.application.contact_service import ContactService
 from assistant.application.note_service import NoteService
@@ -96,7 +95,6 @@ def build_cli() -> CLI:
 
 
 def main() -> None:
-    init(autoreset=True)
     cli = build_cli()
     cli.run()
 
