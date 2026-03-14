@@ -171,6 +171,15 @@ class NoteService:
         tag_name = args[0]
         return book.find_notes_by_tag(tag_name)
 
+    def sort_notes_by_tags(self, args: list[str]) -> list[Note]:
+        args = self._parse_args(args)
+        book = self._load_book()
+
+        if args:
+            raise ValueError("Command 'note sort_by_tags' does not accept arguments.")
+
+        return book.sort_notes_by_tags()
+
     def edit_note(self, args: list[str]) -> str:
         args = self._parse_args(args)
         book = self._load_book()
