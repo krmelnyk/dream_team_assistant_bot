@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ..domain.exceptions import input_error
+from ..domain.exceptions import input_error, CommandError
 
 
 class CLI:
@@ -118,20 +118,20 @@ class CLI:
 
         if section == "contact":
             if not command:
-                raise ValueError("Contact command is required.")
+                raise CommandError("Contact command is required.")
             handler = self.contact_handlers.get(command)
             if handler is None:
-                raise ValueError(f"Unknown contact command: '{command}'.")
+                raise CommandError(f"Unknown contact command: '{command}'.")
             if command == "all":
                 return self.format_result(handler())
             return self.format_result(handler(args))
 
         if section == "note":
             if not command:
-                raise ValueError("Note command is required.")
+                raise CommandError("Note command is required.")
             handler = self.note_handlers.get(command)
             if handler is None:
-                raise ValueError(f"Unknown note command: '{command}'.")
+                raise CommandError(f"Unknown note command: '{command}'.")
             if command == "all":
                 return self.format_result(handler())
             return self.format_result(handler(args))
