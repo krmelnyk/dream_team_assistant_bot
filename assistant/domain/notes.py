@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass, field
 from collections import UserDict
-from .exceptions import ValidationError, NotFoundError
 
 @dataclass
 class Tag:
@@ -11,12 +10,12 @@ class Tag:
 
     def set_name(self, new_name: str):
         if not new_name.strip():
-            raise ValidationError("Tag name cannot be empty.")
+            raise ValueError("Tag name cannot be empty.")
         self.name = new_name.strip()
 
     def __post_init__(self):
         if not self.name.strip():
-            raise ValidationError("Tag name cannot be empty.")
+            raise ValueError("Tag name cannot be empty.")
         self.name = self.name.strip()
 
 @dataclass
@@ -29,12 +28,12 @@ class Note:
 
     def set_title(self, new_title: str):
         if not new_title.strip():
-            raise ValidationError("Note title cannot be empty.")
+            raise ValueError("Note title cannot be empty.")
         self.title = new_title.strip()
 
     def set_content(self, new_content: str):
         if not new_content.strip():
-            raise ValidationError("Note content cannot be empty.")
+            raise ValueError("Note content cannot be empty.")
         self.content = new_content.strip()
 
     def add_tag(self, tag: Tag):
@@ -47,9 +46,9 @@ class Note:
 
     def __post_init__(self):
         if not self.title:
-            raise ValidationError("Note title cannot be empty.")
+            raise ValueError("Note title cannot be empty.")
         if not self.content:
-            raise ValidationError("Note content cannot be empty.")
+            raise ValueError("Note content cannot be empty.")
         
     def __str__(self):
         return f"Note {self.id}: {self.title} - {self.content}. Tags: {[tag.name for tag in self.tags]}"
@@ -59,35 +58,45 @@ class NotesBook(UserDict):
 
     def add_note(self, note: Note):
         if note.id in self.data:
-            raise ValidationError(f"Note with ID {note.id} already exists.")
+            raise ValueError(f"Note with ID {note.id} already exists.")
         self.data[note.id] = note
 
     def remove_note(self, note_id: int):
         if note_id not in self.data:
-            raise NotFoundError(f"No note found with ID {note_id}.")
+            raise KeyError(f"No note found with ID {note_id}.")
         del self.data[note_id]
 
     def get_note(self, note_id: int) -> Note:
         if note_id not in self.data:
-            raise NotFoundError(f"No note found with ID {note_id}.")
+            raise KeyError(f"No note found with ID {note_id}.")
         return self.data[note_id]
     
     def find_notes_by_tag(self, tag_name: str) -> list[Note]:
         tag_name = tag_name.strip()
         if not tag_name:
-            raise ValidationError("Tag name cannot be empty.")
+            raise ValueError("Tag name cannot be empty.")
 
         matched_notes = [
             note for note in self.data.values()
             if any(tag.name == tag_name for tag in note.tags)
         ]
         if not matched_notes:
-            raise NotFoundError(f"No notes found with tag '{tag_name}'.")
+            raise KeyError(f"No notes found with tag '{tag_name}'.")
         return matched_notes
+
+    def sort_notes_by_tags(self) -> list[Note]:
+        if not self.data:
+            raise ValueError("No notes found.")
+
+        def sort_key(note: Note) -> tuple[bool, tuple[str, ...], int]:
+            normalized_tags = tuple(sorted(tag.name.lower() for tag in note.tags))
+            return (len(normalized_tags) == 0, normalized_tags, note.id)
+
+        return sorted(self.data.values(), key=sort_key)
 
     def edit_note(self, note_id: int, **kwargs):
         if note_id not in self.data:
-            raise NotFoundError(f"No note found with ID {note_id}.")
+            raise KeyError(f"No note found with ID {note_id}.")
         note = self.data[note_id]
         for key, value in kwargs.items():
             if key == 'title':
@@ -96,8 +105,8 @@ class NotesBook(UserDict):
                 note.set_content(value)
             elif key == 'tags':
                 if not isinstance(value, list) or not all(isinstance(tag, Tag) for tag in value):
-                    raise ValidationError("Tags must be a list of Tag instances.")
+                    raise ValueError("Tags must be a list of Tag instances.")
                 note.tags = value
             else:
-                raise ValidationError(f"Note has no attribute '{key}'.")
+                raise ValueError(f"Note has no attribute '{key}'.")
             
