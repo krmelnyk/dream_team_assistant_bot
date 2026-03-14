@@ -32,7 +32,8 @@ class CLI:
             "  note edit <id> title=<value> [content=<value>] - edit a note\n"
             "  note add_tag <id> <tag> - add a tag to a note\n"
             "  note remove_tag <id> <tag> - remove a tag from a note\n"
-            "  note find_by_tag <tag> - find notes by tag"
+            "  note find_by_tag <tag> - find notes by tag\n"
+            "  note sort_by_tags - sort notes by tags"
         )
 
         self.contact_handlers = {
@@ -57,6 +58,7 @@ class CLI:
             "add_tag": self.note_service.add_tag,
             "remove_tag": self.note_service.remove_tag,
             "find_by_tag": self.note_service.find_notes_by_tag,
+            "sort_by_tags": self.note_service.sort_notes_by_tags,
         }
 
     def parse_input(self, user_input: str) -> tuple[str, str, list[str]]:

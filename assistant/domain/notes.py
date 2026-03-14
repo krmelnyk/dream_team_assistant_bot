@@ -84,6 +84,16 @@ class NotesBook(UserDict):
             raise KeyError(f"No notes found with tag '{tag_name}'.")
         return matched_notes
 
+    def sort_notes_by_tags(self) -> list[Note]:
+        if not self.data:
+            raise ValueError("No notes found.")
+
+        def sort_key(note: Note) -> tuple[bool, tuple[str, ...], int]:
+            normalized_tags = tuple(sorted(tag.name.lower() for tag in note.tags))
+            return (len(normalized_tags) == 0, normalized_tags, note.id)
+
+        return sorted(self.data.values(), key=sort_key)
+
     def edit_note(self, note_id: int, **kwargs):
         if note_id not in self.data:
             raise KeyError(f"No note found with ID {note_id}.")
