@@ -7,7 +7,7 @@ from colorama import Fore, Style
 from rich.console import Console
 from rich.table import Table
 
-from ..domain.exceptions import ERROR_PREFIX, input_error
+from ..domain.exceptions import ERROR_PREFIX, input_error, CommandError
 
 class HintsCompleter(Completer):
     def __init__(self, hints):
@@ -229,10 +229,10 @@ class CLI:
 
         if section == "contact":
             if not command:
-                raise ValueError("Contact command is required.")
+                raise CommandError("Contact command is required.")
             handler = self.contact_handlers.get(command)
             if handler is None:
-                raise ValueError(f"Unknown contact command: '{command}'.")
+                raise CommandError(f"Unknown contact command: '{command}'.")
             if command == "all":
                 return handler()
 
@@ -245,10 +245,10 @@ class CLI:
 
         if section == "note":
             if not command:
-                raise ValueError("Note command is required.")
+                raise CommandError("Note command is required.")
             handler = self.note_handlers.get(command)
             if handler is None:
-                raise ValueError(f"Unknown note command: '{command}'.")
+                raise CommandError(f"Unknown note command: '{command}'.")
             if command == "all":
                 return handler()
 
