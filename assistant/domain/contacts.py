@@ -1,89 +1,113 @@
 """Contacts domain models and rules (skeleton)."""
 
-# TODO: add Contact entity and related value objects.
-
 import re
-from datetime import date
+from datetime import date, datetime
 from collections import UserDict
-
-from .exceptions import ValidationError, NotFoundError
-
-
-class Field:
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return str(self.value)
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({self.value!r})"
+from dataclasses import dataclass, field
+from typing import List
 
 
-class Name(Field):
-    def __init__(self, value: str):
-        self.value = value.strip()
-        if not self.value:
-            raise ValidationError("Name cannot be empty.")
+def normalize_phone(phone: str) -> str:
+    raw = phone.strip()
+    digits = re.sub(r"\D", "", raw)
+
+    if len(digits) == 10 and digits.startswith("0"):
+        normalized = f"+38{digits}"
+    
+    elif len(digits) == 12 and digits.startswith("38"):
+        normalized = f"+{digits}"
+    
+    elif raw.startswith("+"):
+        normalized = f"+{digits}"
+    else:
+        raise ValueError(f"Invalid phone number: {phone}")
+
+    if not re.fullmatch(r"\+\d{7,15}", normalized):
+        raise ValueError(f"Invalid phone number: {phone}")
+
+    return normalized
 
 
-class Email(Field):
-    PATTERN = re.compile(r"^[\w.+-]+@[\w-]+\.[\w.-]+$")
-
-    def __init__(self, value: str):
-        self.value = value.strip()
-        if self.value and not self.PATTERN.match(self.value):
-            raise ValidationError(f"Invalid email: {self.value}")
+def validate_phone(phone: str) -> str:
+    return normalize_phone(phone)
 
 
-class Phone(Field):
-    def __init__(self, value: str):
-        cleaned = re.sub(r"[\s\-\(\)]", "", value.strip())
-        if not re.fullmatch(r"\+?\d{7,15}", cleaned):
-            raise ValidationError(f"Invalid phone number: {value}")
-        self.value = cleaned
+def validate_email(email: str) -> str:
+    email = email.strip()
+    pattern = re.compile(r"^[\w.+-]+@[\w-]+\.[\w.-]+$")
+    if not pattern.match(email):
+        raise ValueError(f"Invalid email: {email}")
+    return email
 
 
-class Address(Field):
-    def __init__(self, value: str):
-        self.value = value.strip()
+def validate_birthday(birthday: str) -> str:
+    birthday = birthday.strip()
+    try:
+        parsed = datetime.strptime(birthday, "%d-%m-%Y").date()
+    except ValueError as error:
+        raise ValueError(
+            f"Invalid birthday format: {birthday}. Use DD-MM-YYYY."
+        ) from error
+
+    if parsed > date.today():
+        raise ValueError(f"Birthday cannot be in the future: {birthday}")
+
+    return parsed.strftime("%d-%m-%Y")
 
 
-class Birthday(Field):
-    def __init__(self, value: date):
-        if value > date.today():
-            raise ValidationError("Birthday cannot be in the future.")
-        self.value = value
-
-
+@dataclass
 class Contact:
     """Represents a contact in the system."""
 
-    def __init__(self, name: str):
-        self.name = Name(name)
-        self.email: Email | None = None
-        self.phones: list[Phone] = []
-        self.address: Address | None = None
-        self.birthday: Birthday | None = None
+    name: str
+    email: str | None = None
+    phones: List[str] = field(default_factory=list)
+    address: str | None = None
+    birthday: str | None = None
 
     def set_phone(self, phone: str) -> None:
-        if any(p.value == phone for p in self.phones):
-            raise ValidationError(
-                f"Phone number '{phone}' already exists for this contact."
-            )
-        self.phones.append(Phone(phone))
+        normalized_phone = validate_phone(phone)
+        if normalized_phone in self.phones:
+            raise ValueError(f"Phone number '{phone}' already exists for this contact.")
+        self.phones.append(normalized_phone)
 
     def remove_phone(self, phone: str) -> None:
-        self.phones = [p for p in self.phones if p.value != phone]
+        normalized_phone = validate_phone(phone)
+        self.phones = [p for p in self.phones if p != normalized_phone]
 
     def set_email(self, email: str) -> None:
-        self.email = Email(email)
+        self.email = validate_email(email)
 
     def set_address(self, address: str) -> None:
-        self.address = Address(address)
+        self.address = address
 
-    def set_birthday(self, birthday: date) -> None:
-        self.birthday = Birthday(birthday)
+    def set_birthday(self, birthday: str) -> None:
+        self.birthday = validate_birthday(birthday)
+
+    def change_phone(self, old_phone: str, new_phone: str) -> None:
+        normalized_old_phone = validate_phone(old_phone)
+        normalized_new_phone = validate_phone(new_phone)
+
+        if normalized_old_phone not in self.phones:
+            raise ValueError(f"Phone number '{old_phone}' not found for this contact.")
+        if (
+            normalized_new_phone in self.phones
+            and normalized_new_phone != normalized_old_phone
+        ):
+            raise ValueError(
+                f"Phone number '{new_phone}' already exists for this contact."
+            )
+
+        self.phones = [
+            normalized_new_phone if p == normalized_old_phone else p
+            for p in self.phones
+        ]
+
+    def __post_init__(self):
+        self.name = self.name.strip()
+        if not self.name:
+            raise ValueError("Contact name cannot be empty.")
+        self.phones = [validate_phone(phone) for phone in self.phones]
 
     def __str__(self):
         return f"{self.name} - Email: {self.email}, Phones: {[str(p) for p in self.phones]}, Address: {self.address}, Birthday: {self.birthday}"
@@ -93,46 +117,45 @@ class ContactBook(UserDict):
     """A collection of contacts, indexed by name."""
 
     def add_contact(self, contact: Contact) -> None:
-        self.data[contact.name.value] = contact
+        self.data[contact.name] = contact
 
     def remove_contact(self, name: str) -> None:
         if name not in self.data:
-            raise NotFoundError(f"Contact '{name}' not found.")
+            raise KeyError(f"Contact '{name}' not found.")
         del self.data[name]
 
     def find_contact(self, value: str) -> Contact | None:
         if value in self.data:
             return self.data[value]
 
-        for contact in self.data.values():
-            if contact.email and contact.email.value == value:
-                return contact
-            if any(phone.value == value for phone in contact.phones):
-                return contact
-            if contact.address and contact.address.value == value:
-                return contact
-            if contact.birthday and str(contact.birthday.value) == value:
-                return contact
+        normalized_value = value
+        try:
+            normalized_value = validate_phone(value)
+        except ValueError:
+            pass
 
-        raise NotFoundError(f"No contact found for key: {value}")
+        for contact in self.data.values():
+            if contact.email and contact.email == value:
+                return contact
+            if any(phone == normalized_value for phone in contact.phones):
+                return contact
+            if contact.address and contact.address == value:
+                return contact
+            if contact.birthday and str(contact.birthday) == value:
+                return contact
+        raise KeyError(f"No contact found for key: {value}")
 
     def upcoming_birthdays(self, days: int) -> list[Contact]:
         today = date.today()
         upcoming = []
-
         for contact in self.data.values():
             if contact.birthday:
-                bday_this_year = contact.birthday.value.replace(year=today.year)
-
+                bday = datetime.strptime(contact.birthday, "%d-%m-%Y").date()
+                bday_this_year = bday.replace(year=today.year)
                 if bday_this_year < today:
                     bday_this_year = bday_this_year.replace(year=today.year + 1)
-
                 if 0 <= (bday_this_year - today).days <= days:
                     upcoming.append(contact)
-
         if not upcoming:
-            raise NotFoundError(
-                f"No upcoming birthdays in the next {days} days."
-            )
-
+            raise ValueError(f"No upcoming birthdays in the next {days} days.")
         return upcoming

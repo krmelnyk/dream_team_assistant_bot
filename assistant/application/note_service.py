@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from ..domain.notes import Note, NotesBook, Tag
-from ..domain.exceptions import CommandError
 
 
 class NoteService:
@@ -51,7 +50,7 @@ class NoteService:
             current.append(char)
 
         if quote_char:
-            raise CommandError(
+            raise ValueError(
                 "Invalid note command syntax: check quotes in arguments."
             )
 
@@ -63,7 +62,7 @@ class NoteService:
     def show_all_notes(self) -> list[Note]:
         book = self._load_book()
         if not book.data:
-            raise CommandError("No notes found.")
+            raise ValueError("No notes found.")
         return list(book.data.values())
 
     def find_note(self, args: list[str]) -> Note:
@@ -71,12 +70,12 @@ class NoteService:
         book = self._load_book()
 
         if len(args) < 1:
-            raise CommandError("Note ID is required.")
+            raise ValueError("Note ID is required.")
 
         try:
             note_id = int(args[0])
         except ValueError as error:
-            raise CommandError("Note ID must be an integer.") from error
+            raise ValueError("Note ID must be an integer.") from error
 
         return book.get_note(note_id)
 
@@ -85,14 +84,14 @@ class NoteService:
         book = self._load_book()
 
         if len(args) < 2:
-            raise CommandError("Note title and content are required.")
+            raise ValueError("Note title and content are required.")
 
         title, content, *rest = args
 
         if len(title.strip()) >= 100:
-            raise CommandError("Note title cannot exceed 100 characters.")
+            raise ValueError("Note title cannot exceed 100 characters.")
         if len(content.strip()) >= 1000:
-            raise CommandError("Note content cannot exceed 1000 characters.")
+            raise ValueError("Note content cannot exceed 1000 characters.")
 
         note = Note(
             id=self._next_id(book),
@@ -113,12 +112,12 @@ class NoteService:
         book = self._load_book()
 
         if len(args) < 1:
-            raise CommandError("Note ID is required.")
+            raise ValueError("Note ID is required.")
 
         try:
             note_id = int(args[0])
         except ValueError as error:
-            raise CommandError("Note ID must be an integer.") from error
+            raise ValueError("Note ID must be an integer.") from error
 
         book.remove_note(note_id)
         self._save_book(book)
@@ -129,12 +128,12 @@ class NoteService:
         book = self._load_book()
 
         if len(args) < 2:
-            raise CommandError("Note ID and tag name are required.")
+            raise ValueError("Note ID and tag name are required.")
 
         try:
             note_id = int(args[0])
         except ValueError as error:
-            raise CommandError("Note ID must be an integer.") from error
+            raise ValueError("Note ID must be an integer.") from error
 
         tag_name = args[1]
         note = book.get_note(note_id)
@@ -148,12 +147,12 @@ class NoteService:
         book = self._load_book()
 
         if len(args) < 2:
-            raise CommandError("Note ID and tag name are required.")
+            raise ValueError("Note ID and tag name are required.")
 
         try:
             note_id = int(args[0])
         except ValueError as error:
-            raise CommandError("Note ID must be an integer.") from error
+            raise ValueError("Note ID must be an integer.") from error
 
         tag_name = args[1]
         note = book.get_note(note_id)
@@ -167,7 +166,7 @@ class NoteService:
         book = self._load_book()
 
         if len(args) < 1:
-            raise CommandError("Tag name is required.")
+            raise ValueError("Tag name is required.")
 
         tag_name = args[0]
         return book.find_notes_by_tag(tag_name)
@@ -177,19 +176,19 @@ class NoteService:
         book = self._load_book()
 
         if len(args) < 2:
-            raise CommandError("Note ID and at least one field to edit are required.")
+            raise ValueError("Note ID and at least one field to edit are required.")
 
         try:
             note_id = int(args[0])
         except ValueError as error:
-            raise CommandError("Note ID must be an integer.") from error
+            raise ValueError("Note ID must be an integer.") from error
 
         note = book.get_note(note_id)
         fields = args[1:]
 
         for field in fields:
             if "=" not in field:
-                raise CommandError(
+                raise ValueError(
                     f"Invalid field format: '{field}'. Expected 'field=value'."
                 )
 
@@ -202,7 +201,7 @@ class NoteService:
             elif key == "content":
                 note.set_content(value)
             else:
-                raise CommandError(
+                raise ValueError(
                     f"Unknown field: '{key}'. Only 'title' and 'content' can be edited."
                 )
 
