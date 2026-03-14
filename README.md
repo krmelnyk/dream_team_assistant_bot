@@ -94,11 +94,6 @@ pip install -r requirements.txt
 ```bash
 python main.py
 ```
-5. Run the test:
-
-```bash
-python -m pytest -v
-```
 
 ## CLI Commands
 
