@@ -197,7 +197,12 @@ def test_contact_service_supports_quoted_address():
     service = ContactService(DummyRepository())
 
     result = service.add_contact(
-        ["Anton", "+380991112233", "anton@example.com", '"Kyiv, Khreshchatyk 1"']
+        [
+            "Anton",
+            "+380991112233",
+            "anton@example.com",
+            '"Kyiv, Khreshchatyk 1"',
+        ]
     )
 
     saved_contact = service._repository.book.get_contact("Anton")

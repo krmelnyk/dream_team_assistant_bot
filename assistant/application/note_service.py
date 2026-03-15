@@ -162,7 +162,9 @@ class NoteService:
         book = self._load_book()
 
         if args:
-            raise CommandError("Command 'note sort_by_tags' does not accept arguments.")
+            raise CommandError(
+                "Command 'note sort_by_tags' does not accept arguments."
+            )
 
         return book.sort_notes_by_tags()
 
@@ -171,7 +173,9 @@ class NoteService:
         book = self._load_book()
 
         if len(args) < 2:
-            raise CommandError("Note ID and at least one field to edit are required.")
+            raise CommandError(
+                "Note ID and at least one field to edit are required."
+            )
 
         try:
             note_id = int(args[0])
@@ -197,7 +201,8 @@ class NoteService:
                 note.set_content(value)
             else:
                 raise CommandError(
-                    f"Unknown field: '{key}'. Only 'title' and 'content' can be edited."
+                    f"Unknown field: '{key}'. Only 'title' and "
+                    "'content' can be edited."
                 )
 
         self._save_book(book)

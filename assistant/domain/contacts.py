@@ -16,10 +16,8 @@ def normalize_phone(phone: str) -> str:
     # and normalize everything to a single +XXXXXXXXXXX representation.
     if len(digits) == 10 and digits.startswith("0"):
         normalized = f"+38{digits}"
-    
     elif len(digits) == 12 and digits.startswith("38"):
         normalized = f"+{digits}"
-    
     elif raw.startswith("+"):
         normalized = f"+{digits}"
     else:
@@ -71,7 +69,10 @@ class Contact:
     def set_phone(self, phone: str) -> None:
         normalized_phone = validate_phone(phone)
         if normalized_phone in self.phones:
-            raise ValidationError(f"Phone number '{phone}' already exists for this contact.")
+            raise ValidationError(
+                f"Phone number '{phone}' already exists for this "
+                "contact."
+            )
         self.phones.append(normalized_phone)
 
     def remove_phone(self, phone: str) -> None:
@@ -92,7 +93,9 @@ class Contact:
         normalized_new_phone = validate_phone(new_phone)
 
         if normalized_old_phone not in self.phones:
-            raise ValidationError(f"Phone number '{old_phone}' not found for this contact.")
+            raise ValidationError(
+                f"Phone number '{old_phone}' not found for this contact."
+            )
         if (
             normalized_new_phone in self.phones
             and normalized_new_phone != normalized_old_phone
@@ -113,7 +116,11 @@ class Contact:
         self.phones = [validate_phone(phone) for phone in self.phones]
 
     def __str__(self):
-        return f"{self.name} - Email: {self.email}, Phones: {[str(p) for p in self.phones]}, Address: {self.address}, Birthday: {self.birthday}"
+        phones = [str(phone) for phone in self.phones]
+        return (
+            f"{self.name} - Email: {self.email}, Phones: {phones}, "
+            f"Address: {self.address}, Birthday: {self.birthday}"
+        )
 
 
 class ContactBook(UserDict):
@@ -122,8 +129,9 @@ class ContactBook(UserDict):
     def add_contact(self, contact: Contact) -> None:
         if contact.name in self.data:
             raise ValidationError(
-                f"Contact with name '{contact.name}' already exists. Use edit commands to update it."
-                )   
+                f"Contact with name '{contact.name}' already exists. "
+                "Use edit commands to update it."
+            )
         self.data[contact.name] = contact
 
     def remove_contact(self, name: str) -> None:
@@ -182,9 +190,13 @@ class ContactBook(UserDict):
                 # If the birthday already passed this year, compare against
                 # the next occurrence in the following year.
                 if bday_this_year < today:
-                    bday_this_year = bday_this_year.replace(year=today.year + 1)
+                    bday_this_year = bday_this_year.replace(
+                        year=today.year + 1
+                    )
                 if 0 <= (bday_this_year - today).days <= days:
                     upcoming.append(contact)
         if not upcoming:
-            raise ValidationError(f"No upcoming birthdays in the next {days} days.")
+            raise ValidationError(
+                f"No upcoming birthdays in the next {days} days."
+            )
         return upcoming

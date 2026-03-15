@@ -210,7 +210,9 @@ class DummyRepository:
 def test_note_service_supports_shlex_quoted_arguments():
     service = NoteService(DummyRepository())
 
-    result = service.add_note(['"Weekly plan"', '"Prepare project demo"', "work"])
+    result = service.add_note(
+        ['"Weekly plan"', '"Prepare project demo"', "work"]
+    )
 
     saved_note = service._repository.book.get_note(1)
     assert result == "Note added successfully."

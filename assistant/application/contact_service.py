@@ -134,7 +134,9 @@ class ContactService:
         book = self._load_book()
 
         if len(args) < 3:
-            raise CommandError("Contact name, field, and new value are required.")
+            raise CommandError(
+                "Contact name, field, and new value are required."
+            )
 
         if len(args) == 4:
             name, field, old_value, new_value = args

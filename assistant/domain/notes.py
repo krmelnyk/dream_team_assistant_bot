@@ -7,6 +7,7 @@ from .exceptions import ValidationError, NotFoundError
 @dataclass
 class Tag:
     """Represents a tag that can be associated with notes."""
+
     name: str
 
     def set_name(self, new_name: str):
@@ -40,7 +41,7 @@ class Note:
     def add_tag(self, tag: Tag):
         if tag not in self.tags:
             self.tags.append(tag)
-    
+
     def remove_tag(self, tag: Tag):
         if tag in self.tags:
             self.tags.remove(tag)
@@ -50,9 +51,13 @@ class Note:
             raise ValidationError("Note title cannot be empty.")
         if not self.content:
             raise ValidationError("Note content cannot be empty.")
-        
+
     def __str__(self):
-        return f"Note {self.id}: {self.title} - {self.content}. Tags: {[tag.name for tag in self.tags]}"
+        tag_names = [tag.name for tag in self.tags]
+        return (
+            f"Note {self.id}: {self.title} - {self.content}. "
+            f"Tags: {tag_names}"
+        )
 
 class NotesBook(UserDict):
     """A collection of notes, indexed by note ID."""
@@ -71,7 +76,7 @@ class NotesBook(UserDict):
         if note_id not in self.data:
             raise NotFoundError(f"No note found with ID {note_id}.")
         return self.data[note_id]
-    
+
     def find_notes_by_tag(self, tag_name: str) -> list[Note]:
         tag_name = tag_name.strip()
         if not tag_name:
@@ -108,7 +113,9 @@ class NotesBook(UserDict):
         def sort_key(note: Note) -> tuple[bool, tuple[str, ...], int]:
             # Notes without tags are pushed to the end; the rest are sorted
             # by normalized tag set and then by id for deterministic output.
-            normalized_tags = tuple(sorted(tag.name.lower() for tag in note.tags))
+            normalized_tags = tuple(
+                sorted(tag.name.lower() for tag in note.tags)
+            )
             return (len(normalized_tags) == 0, normalized_tags, note.id)
 
         return sorted(self.data.values(), key=sort_key)
@@ -123,8 +130,13 @@ class NotesBook(UserDict):
             elif key == 'content':
                 note.set_content(value)
             elif key == 'tags':
-                if not isinstance(value, list) or not all(isinstance(tag, Tag) for tag in value):
-                    raise ValidationError("Tags must be a list of Tag instances.")
+                if (
+                    not isinstance(value, list)
+                    or not all(isinstance(tag, Tag) for tag in value)
+                ):
+                    raise ValidationError(
+                        "Tags must be a list of Tag instances."
+                    )
                 note.tags = value
             else:
                 raise ValidationError(f"Note has no attribute '{key}'.")
