@@ -54,16 +54,67 @@ def test_find_contact_by_name():
 
     found = book.find_contact("Anton")
 
-    assert found.name == "Anton"
+    assert len(found) == 1
+    assert found[0].name == "Anton"
 
 
-def test_find_contact_by_phone():
+def test_find_contact_by_phone_fragment():
     book = ContactBook()
     contact = Contact("Anton")
     contact.set_phone("+380991112233")
     book.add_contact(contact)
 
-    found = book.find_contact("+380991112233")
+    found = book.find_contact("38099")
+
+    assert len(found) == 1
+    assert found[0].name == "Anton"
+
+
+def test_find_contact_by_partial_email():
+    book = ContactBook()
+    contact = Contact("Anton", email="anton@gmail.com")
+    contact.set_phone("+380991112233")
+    book.add_contact(contact)
+
+    found = book.find_contact("@gmail")
+
+    assert len(found) == 1
+    assert found[0].name == "Anton"
+
+
+def test_find_contact_by_partial_address():
+    book = ContactBook()
+    contact = Contact("Anton", address="Kyiv, Khreshchatyk 1")
+    contact.set_phone("+380991112233")
+    book.add_contact(contact)
+
+    found = book.find_contact("Khresh")
+
+    assert len(found) == 1
+    assert found[0].name == "Anton"
+
+
+def test_find_contact_returns_multiple_matches():
+    book = ContactBook()
+    anton = Contact("Anton")
+    anton.set_phone("+380991112233")
+    antonina = Contact("Antonina")
+    antonina.set_phone("+380671112233")
+    book.add_contact(anton)
+    book.add_contact(antonina)
+
+    found = book.find_contact("Anton")
+
+    assert [contact.name for contact in found] == ["Anton", "Antonina"]
+
+
+def test_get_contact_by_name():
+    book = ContactBook()
+    contact = Contact("Anton")
+    contact.set_phone("+380991112233")
+    book.add_contact(contact)
+
+    found = book.get_contact("Anton")
 
     assert found.name == "Anton"
 
@@ -138,7 +189,7 @@ def test_contact_service_supports_quoted_address():
         ["Anton", "+380991112233", "anton@example.com", '"Kyiv, Khreshchatyk 1"']
     )
 
-    saved_contact = service._repository.book.find_contact("Anton")
+    saved_contact = service._repository.book.get_contact("Anton")
     assert result == "Contact added successfully."
     assert saved_contact.address == "Kyiv, Khreshchatyk 1"
 
@@ -152,4 +203,5 @@ def test_contact_service_finds_contact_by_quoted_multiword_address():
 
     found = service.find_contact(['"Kyiv, Khreshchatyk 1"'])
 
-    assert found.name == "Anton"
+    assert len(found) == 1
+    assert found[0].name == "Anton"

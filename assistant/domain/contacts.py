@@ -127,26 +127,46 @@ class ContactBook(UserDict):
             raise NotFoundError(f"Contact '{name}' not found.")
         del self.data[name]
 
-    def find_contact(self, value: str) -> Contact | None:
-        if value in self.data:
-            return self.data[value]
+    def get_contact(self, name: str) -> Contact:
+        if name not in self.data:
+            raise NotFoundError(f"Contact '{name}' not found.")
+        return self.data[name]
 
-        normalized_value = value
-        try:
-            normalized_value = validate_phone(value)
-        except ValidationError:
-            pass
+    def find_contact(self, value: str) -> list[Contact]:
+        query = value.strip()
+        if not query:
+            raise ValidationError("Search value cannot be empty.")
+
+        normalized_query = query.casefold()
+        phone_query = re.sub(r"\D", "", query)
+        matched_contacts: list[Contact] = []
 
         for contact in self.data.values():
-            if contact.email and contact.email == value:
-                return contact
-            if any(phone == normalized_value for phone in contact.phones):
-                return contact
-            if contact.address and contact.address == value:
-                return contact
-            if contact.birthday and str(contact.birthday) == value:
-                return contact
-        raise NotFoundError(f"No contact found for key: {value}")
+            searchable_values = [
+                contact.name,
+                contact.email or "",
+                contact.address or "",
+                contact.birthday or "",
+            ]
+
+            text_match = any(
+                normalized_query in field.casefold()
+                for field in searchable_values
+                if field
+            )
+
+            phone_match = any(
+                phone_query and phone_query in re.sub(r"\D", "", phone)
+                for phone in contact.phones
+            )
+
+            if text_match or phone_match:
+                matched_contacts.append(contact)
+
+        if not matched_contacts:
+            raise NotFoundError(f"No contacts found matching '{value}'.")
+
+        return matched_contacts
 
     def upcoming_birthdays(self, days: int) -> list[Contact]:
         today = date.today()

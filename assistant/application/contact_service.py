@@ -81,7 +81,7 @@ class ContactService:
             raise CommandError("Contact name and birthday are required.")
 
         name, birthday = args
-        contact = book.find_contact(name)
+        contact = book.get_contact(name)
         contact.set_birthday(birthday)
 
         self._save_book(book)
@@ -95,7 +95,7 @@ class ContactService:
             raise CommandError("Contact name and email are required.")
 
         name, email = args
-        contact = book.find_contact(name)
+        contact = book.get_contact(name)
         contact.set_email(email)
 
         self._save_book(book)
@@ -109,7 +109,7 @@ class ContactService:
             raise CommandError("Contact name and address are required.")
 
         name, address = args
-        contact = book.find_contact(name)
+        contact = book.get_contact(name)
         contact.set_address(address)
 
         self._save_book(book)
@@ -123,7 +123,7 @@ class ContactService:
             raise CommandError("Contact name and phone are required.")
 
         name, phone = args
-        contact = book.find_contact(name)
+        contact = book.get_contact(name)
         contact.set_phone(phone)
 
         self._save_book(book)
@@ -138,7 +138,7 @@ class ContactService:
 
         if len(args) == 4:
             name, field, old_value, new_value = args
-            contact = book.find_contact(name)
+            contact = book.get_contact(name)
 
             if field == "phone":
                 contact.change_phone(old_value, new_value)
@@ -146,7 +146,7 @@ class ContactService:
                 return "Phone updated successfully."
 
         name, field, new_value = args
-        contact = book.find_contact(name)
+        contact = book.get_contact(name)
 
         if field == "email":
             contact.set_email(new_value)
@@ -160,7 +160,7 @@ class ContactService:
         self._save_book(book)
         return "Contact updated successfully."
 
-    def find_contact(self, args: list[str]) -> Contact:
+    def find_contact(self, args: list[str]) -> list[Contact]:
         args = self._parse_args(args)
         book = self._load_book()
 
