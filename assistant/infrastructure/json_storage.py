@@ -43,7 +43,8 @@ def read_json(path: str | Path, default: Any = None) -> Any:
             return json.load(handle)
     except json.JSONDecodeError as error:
         raise StorageError(
-            f"Invalid JSON in '{file_path.name}'. Please fix or remove the file."
+            f"Invalid JSON in '{file_path.name}'. "
+            "Please fix or remove the file."
         ) from error
     except OSError as error:
         raise StorageError(

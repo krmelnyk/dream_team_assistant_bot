@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import shlex
+
 from ..domain.exceptions import CommandError
 from ..domain.notes import Note, NotesBook, Tag
 
@@ -22,45 +24,16 @@ class NoteService:
         return max(book.data.keys()) + 1
 
     def _parse_args(self, args: list[str]) -> list[str]:
-        if not args:
-            return []
-
         raw_args = " ".join(args).strip()
         if not raw_args:
             return []
 
-        parsed: list[str] = []
-        current: list[str] = []
-        quote_char = ""
-
-        # Notes support multi-word titles/content inside quotes, so this
-        # parser keeps quoted chunks together before service-level handling.
-        for char in raw_args:
-            if char in ('"', "'"):
-                if not quote_char:
-                    quote_char = char
-                    continue
-                if quote_char == char:
-                    quote_char = ""
-                    continue
-
-            if char.isspace() and not quote_char:
-                if current:
-                    parsed.append("".join(current))
-                    current = []
-                continue
-
-            current.append(char)
-
-        if quote_char:
+        try:
+            return shlex.split(raw_args)
+        except ValueError as error:
             raise CommandError(
                 "Invalid note command syntax: check quotes in arguments."
-            )
-
-        if current:
-            parsed.append("".join(current))
-
-        return parsed
+            ) from error
 
     def show_all_notes(self) -> list[Note]:
         book = self._load_book()
@@ -189,7 +162,9 @@ class NoteService:
         book = self._load_book()
 
         if args:
-            raise CommandError("Command 'note sort_by_tags' does not accept arguments.")
+            raise CommandError(
+                "Command 'note sort_by_tags' does not accept arguments."
+            )
 
         return book.sort_notes_by_tags()
 
@@ -198,7 +173,9 @@ class NoteService:
         book = self._load_book()
 
         if len(args) < 2:
-            raise CommandError("Note ID and at least one field to edit are required.")
+            raise CommandError(
+                "Note ID and at least one field to edit are required."
+            )
 
         try:
             note_id = int(args[0])
@@ -224,7 +201,8 @@ class NoteService:
                 note.set_content(value)
             else:
                 raise CommandError(
-                    f"Unknown field: '{key}'. Only 'title' and 'content' can be edited."
+                    f"Unknown field: '{key}'. Only 'title' and "
+                    "'content' can be edited."
                 )
 
         self._save_book(book)

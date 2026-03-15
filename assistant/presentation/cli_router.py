@@ -64,27 +64,41 @@ class CLI:
             ("exit | close", "quit the program"),
             ("contact all", "show all saved contacts"),
             (
-                "contact add <name> <phone> [email] [address] [birthday]",
-                "add a contact with optional email, address, and birthday",
+                'contact add <name> <phone> [email] ["address"] [birthday]',
+                "add a contact; optional fields go in order: "
+                "email, address, birthday",
             ),
             ("contact remove <name>", "remove a contact by name"),
             (
-                "contact find <value>",
-                "find a contact by name, email, phone, address, or birthday",
+                'contact find <value>',
+                "find contacts by partial match; wrap multi-word values "
+                "in quotes",
             ),
-            ("contact add_email <name> <email>", "add or update a contact email"),
-            ("contact add_address <name> <address>", "add or update a contact address"),
-            ("contact add_phone <name> <phone>", "add another phone number"),
-            ("contact add_birthday <name> <DD-MM-YYYY>", "add or update a birthday"),
             (
-                "contact edit <name> email|address|birthday <value>",
-                "edit one contact field",
+                "contact add_email <name> <email>",
+                "add or update a contact email",
+            ),
+            (
+                'contact add_address <name> "address"',
+                "add or update a contact address",
+            ),
+            ("contact add_phone <name> <phone>", "add another phone number"),
+            (
+                "contact add_birthday <name> <DD-MM-YYYY>",
+                "add or update a birthday",
+            ),
+            (
+                'contact edit <name> email|address|birthday <value>',
+                "edit one contact field; quote multi-word values",
             ),
             (
                 "contact edit <name> phone <old> <new>",
                 "replace one phone number with another",
             ),
-            ("contact birthdays <days>", "show birthdays within the next N days"),
+            (
+                "contact birthdays <days>",
+                "show birthdays within the next N days",
+            ),
             ("note all", "show all saved notes"),
             (
                 'note add "<title>" "<content>" [tag ...]',
@@ -93,11 +107,11 @@ class CLI:
             ("note remove <id>", "remove a note by id"),
             ("note find <id>", "show one note by id"),
             (
-                "note find_text <query>",
-                "find notes whose title or content contains the query",
+                'note find_text <query>',
+                "find notes by text; wrap multi-word queries in quotes",
             ),
             (
-                "note edit <id> title=<value> [content=<value>]",
+                'note edit <id> title="<value>" [content="<value>"]',
                 "edit note title and/or content; quote multi-word values",
             ),
             ("note add_tag <id> <tag>", "add a tag to a note"),
@@ -260,9 +274,13 @@ class CLI:
             )
             if suggestion:
                 raise CommandError(
-                    f"Unknown command: '{unknown_value}'. Did you mean '{suggestion}'?"
+                    f"Unknown command: '{unknown_value}'. "
+                    f"Did you mean '{suggestion}'?"
                 )
-            return "Unknown command. Use 'contact <command>' or 'note <command>'."
+            return (
+                "Unknown command. Use 'contact <command>' or "
+                "'note <command>'."
+            )
 
         if section == "contact":
             if not command:
@@ -274,7 +292,8 @@ class CLI:
                 )
                 if suggestion:
                     raise CommandError(
-                        f"Unknown contact command: '{command}'. Did you mean '{suggestion}'?"
+                        f"Unknown contact command: '{command}'. "
+                        f"Did you mean '{suggestion}'?"
                     )
                 raise CommandError(f"Unknown contact command: '{command}'.")
             if command == "all":
@@ -297,7 +316,8 @@ class CLI:
                 )
                 if suggestion:
                     raise CommandError(
-                        f"Unknown note command: '{command}'. Did you mean '{suggestion}'?"
+                        f"Unknown note command: '{command}'. "
+                        f"Did you mean '{suggestion}'?"
                     )
                 raise CommandError(f"Unknown note command: '{command}'.")
             if command == "all":
@@ -314,17 +334,23 @@ class CLI:
 
     def run(self) -> None:
         self.console.print("Welcome to the assistant bot!", style="bold")
-        self.console.print("Available sections: [cyan]contact[/cyan], [cyan]note[/cyan]")
-        self.console.print("Type '[cyan]exit[/cyan]' or '[cyan]close[/cyan]' to quit.")
+        self.console.print(
+            "Available sections: [cyan]contact[/cyan], [cyan]note[/cyan]"
+        )
+        self.console.print(
+            "Type '[cyan]exit[/cyan]' or '[cyan]close[/cyan]' to quit."
+        )
         self._print_help_table()
-        
+
         # De-duplicate while preserving insertion order so autocomplete stays
         # predictable for the user.
-        all_commands = list(dict.fromkeys(
-            list(self.contact_handlers.keys())
-            + list(self.note_handlers.keys())
-            + ["contact", "note", "hello", "help", "exit", "close"]
-        ))
+        all_commands = list(
+            dict.fromkeys(
+                list(self.contact_handlers.keys())
+                + list(self.note_handlers.keys())
+                + ["contact", "note", "hello", "help", "exit", "close"]
+            )
+        )
         completer = HintsCompleter(hints=all_commands)
         session = PromptSession(completer=completer)
 

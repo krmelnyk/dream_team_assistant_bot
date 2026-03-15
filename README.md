@@ -6,7 +6,7 @@ A console-based personal assistant in Python for managing contacts and notes.
 
 - Contacts:
   - add, remove, and list all contacts;
-  - search by name, email, phone, address, or birthday;
+  - search contacts by partial match in name, email, phone, address, or birthday;
   - add and edit email, address, birthday, and phone numbers;
   - find upcoming birthdays within the next N days.
 - Notes:
@@ -142,38 +142,54 @@ python -m py_compile main.py assistant/**/*.py
 ### Contacts
 
 - `contact all`
-- `contact add <name> <phone> [email] [address] [birthday]`
+- `contact add <name> <phone> [email] ["address"] [birthday]` optional fields must follow this exact order
 - `contact remove <name>`
-- `contact find <value>`
+- `contact find <value>` partial search across name, email, phone, address, and birthday; for multi-word values use quotes
 - `contact add_email <name> <email>`
-- `contact add_address <name> <address>`
+- `contact add_address <name> "address"`
 - `contact add_phone <name> <phone>`
 - `contact add_birthday <name> <DD-MM-YYYY>`
-- `contact edit <name> email|address|birthday <value>`
+- `contact edit <name> email|address|birthday <value>` for multi-word values use quotes
 - `contact edit <name> phone <old_phone> <new_phone>`
 - `contact birthdays <days>`
 
 ### Notes
 
 - `note all`
-- `note add <title> <content> [tag ...]`
+- `note add "<title>" "<content>" [tag ...]`
 - `note remove <id>`
 - `note find <id>`
-- `note find_text <query>`
-- `note edit <id> title=<value> [content=<value>]`
+- `note find_text <query>` for multi-word queries use quotes
+- `note edit <id> title="<value>" [content="<value>"]`
 - `note add_tag <id> <tag>`
 - `note remove_tag <id> <tag>`
-- `note find_by_tag <tag>`
+- `note find_by_tag <tag>` exact tag match
 - `note sort_by_tags`
+
+### Quoting Rules
+
+- Use quotes for multi-word values such as addresses, note titles, note content, and search queries.
+- In `contact add`, optional values are positional: you cannot skip `email` and pass `address` directly in its place.
+- Single-word values can be entered without quotes.
+- Examples:
+  - `contact add Ivan 0971234567 ivan@gmail.com "Kyiv, Khreshchatyk 1" 12-01-1995`
+  - `contact find "Kyiv, Khreshchatyk 1"`
+  - `contact find 38099`
+  - `note add "Weekly plan" "Prepare project demo" work`
+  - `note find_text "project demo"`
 
 ## Usage Examples
 
 ```text
-contact add Ivan 0971234567 ivan@gmail.com Kyiv 12-01-1995
+contact add Ivan 0971234567 ivan@gmail.com "Kyiv, Khreshchatyk 1" 12-01-1995
 contact add_email Ivan ivan.work@gmail.com
+contact add_address Ivan "Lviv, Shevchenka 10"
 contact add_phone Ivan +380501112233
 contact edit Ivan phone +380501112233 +380501112244
+contact edit Ivan address "Kyiv, Saksahanskoho 25"
 contact find ivan@gmail.com
+contact find "Kyiv, Saksahanskoho 25"
+contact find 38099
 contact birthdays 30
 
 note add "Shopping" "Buy milk and bread" home urgent
