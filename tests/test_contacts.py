@@ -3,6 +3,7 @@ from datetime import date, timedelta
 import pytest
 
 from assistant.domain.contacts import Contact, ContactBook
+from assistant.application.contact_service import ContactService
 
 try:
     from assistant.domain.exceptions import ValidationError, NotFoundError
@@ -117,3 +118,38 @@ def test_upcoming_birthdays_empty_raises_error():
         book.upcoming_birthdays(7)
 
     assert "No upcoming birthdays" in str(exc.value)
+
+
+class DummyRepository:
+    def __init__(self, book=None):
+        self.book = book or ContactBook()
+
+    def read(self):
+        return self.book
+
+    def write(self, book):
+        self.book = book
+
+
+def test_contact_service_supports_quoted_address():
+    service = ContactService(DummyRepository())
+
+    result = service.add_contact(
+        ["Anton", "+380991112233", "anton@example.com", '"Kyiv, Khreshchatyk 1"']
+    )
+
+    saved_contact = service._repository.book.find_contact("Anton")
+    assert result == "Contact added successfully."
+    assert saved_contact.address == "Kyiv, Khreshchatyk 1"
+
+
+def test_contact_service_finds_contact_by_quoted_multiword_address():
+    book = ContactBook()
+    contact = Contact("Anton", address="Kyiv, Khreshchatyk 1")
+    contact.set_phone("+380991112233")
+    book.add_contact(contact)
+    service = ContactService(DummyRepository(book))
+
+    found = service.find_contact(['"Kyiv, Khreshchatyk 1"'])
+
+    assert found.name == "Anton"

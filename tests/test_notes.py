@@ -1,6 +1,7 @@
 import pytest
 
 from assistant.domain.notes import Note, NotesBook, Tag
+from assistant.application.note_service import NoteService
 
 try:
     from assistant.domain.exceptions import ValidationError, NotFoundError
@@ -193,3 +194,25 @@ def test_edit_note_with_unknown_field_raises_validation_error():
 
     with pytest.raises(ValidationError):
         book.edit_note(1, unknown="value")
+
+
+class DummyRepository:
+    def __init__(self, book=None):
+        self.book = book or NotesBook()
+
+    def read(self):
+        return self.book
+
+    def write(self, book):
+        self.book = book
+
+
+def test_note_service_supports_shlex_quoted_arguments():
+    service = NoteService(DummyRepository())
+
+    result = service.add_note(['"Weekly plan"', '"Prepare project demo"', "work"])
+
+    saved_note = service._repository.book.get_note(1)
+    assert result == "Note added successfully."
+    assert saved_note.title == "Weekly plan"
+    assert saved_note.content == "Prepare project demo"

@@ -64,21 +64,24 @@ class CLI:
             ("exit | close", "quit the program"),
             ("contact all", "show all saved contacts"),
             (
-                "contact add <name> <phone> [email] [address] [birthday]",
-                "add a contact with optional email, address, and birthday",
+                'contact add <name> <phone> [email] ["address"] [birthday]',
+                "add a contact; wrap multi-word addresses in quotes",
             ),
             ("contact remove <name>", "remove a contact by name"),
             (
-                "contact find <value>",
-                "find a contact by name, email, phone, address, or birthday",
+                'contact find <value>',
+                "find a contact; wrap multi-word values in quotes",
             ),
             ("contact add_email <name> <email>", "add or update a contact email"),
-            ("contact add_address <name> <address>", "add or update a contact address"),
+            (
+                'contact add_address <name> "address"',
+                "add or update a contact address",
+            ),
             ("contact add_phone <name> <phone>", "add another phone number"),
             ("contact add_birthday <name> <DD-MM-YYYY>", "add or update a birthday"),
             (
-                "contact edit <name> email|address|birthday <value>",
-                "edit one contact field",
+                'contact edit <name> email|address|birthday <value>',
+                "edit one contact field; quote multi-word values",
             ),
             (
                 "contact edit <name> phone <old> <new>",
@@ -93,11 +96,11 @@ class CLI:
             ("note remove <id>", "remove a note by id"),
             ("note find <id>", "show one note by id"),
             (
-                "note find_text <query>",
-                "find notes whose title or content contains the query",
+                'note find_text <query>',
+                "find notes by text; wrap multi-word queries in quotes",
             ),
             (
-                "note edit <id> title=<value> [content=<value>]",
+                'note edit <id> title="<value>" [content="<value>"]',
                 "edit note title and/or content; quote multi-word values",
             ),
             ("note add_tag <id> <tag>", "add a tag to a note"),

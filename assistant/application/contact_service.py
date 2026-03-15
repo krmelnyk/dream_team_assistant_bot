@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import shlex
+
 from ..domain.contacts import Contact, ContactBook
 from ..domain.exceptions import CommandError
 
@@ -16,6 +18,18 @@ class ContactService:
     def _save_book(self, book: ContactBook) -> None:
         self._repository.write(book)
 
+    def _parse_args(self, args: list[str]) -> list[str]:
+        raw_args = " ".join(args).strip()
+        if not raw_args:
+            return []
+
+        try:
+            return shlex.split(raw_args)
+        except ValueError as error:
+            raise CommandError(
+                "Invalid contact command syntax: check quotes in arguments."
+            ) from error
+
     def show_all_contacts(self) -> list[Contact]:
         book = self._load_book()
         if not book.data:
@@ -23,6 +37,7 @@ class ContactService:
         return list(book.data.values())
 
     def add_contact(self, args: list[str]) -> str:
+        args = self._parse_args(args)
         book = self._load_book()
 
         if len(args) < 2:
@@ -47,6 +62,7 @@ class ContactService:
         return "Contact added successfully."
 
     def remove_contact(self, args: list[str]) -> str:
+        args = self._parse_args(args)
         book = self._load_book()
 
         if len(args) < 1:
@@ -58,6 +74,7 @@ class ContactService:
         return "Contact removed successfully."
 
     def add_birthday(self, args: list[str]) -> str:
+        args = self._parse_args(args)
         book = self._load_book()
 
         if len(args) < 2:
@@ -71,6 +88,7 @@ class ContactService:
         return "Birthday added successfully."
 
     def add_email(self, args: list[str]) -> str:
+        args = self._parse_args(args)
         book = self._load_book()
 
         if len(args) < 2:
@@ -84,6 +102,7 @@ class ContactService:
         return "Email added successfully."
 
     def add_address(self, args: list[str]) -> str:
+        args = self._parse_args(args)
         book = self._load_book()
 
         if len(args) < 2:
@@ -97,6 +116,7 @@ class ContactService:
         return "Address added successfully."
 
     def add_phone(self, args: list[str]) -> str:
+        args = self._parse_args(args)
         book = self._load_book()
 
         if len(args) < 2:
@@ -110,6 +130,7 @@ class ContactService:
         return "Phone added successfully."
 
     def edit_contact(self, args: list[str]) -> str:
+        args = self._parse_args(args)
         book = self._load_book()
 
         if len(args) < 3:
@@ -140,15 +161,17 @@ class ContactService:
         return "Contact updated successfully."
 
     def find_contact(self, args: list[str]) -> Contact:
+        args = self._parse_args(args)
         book = self._load_book()
 
         if len(args) < 1:
             raise CommandError("Search value is required.")
 
-        value = args[0]
+        value = " ".join(args).strip()
         return book.find_contact(value)
 
     def birthdays(self, args: list[str]) -> list[Contact]:
+        args = self._parse_args(args)
         book = self._load_book()
 
         if len(args) < 1:
