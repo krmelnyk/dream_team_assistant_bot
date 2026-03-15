@@ -6,7 +6,7 @@ A console-based personal assistant in Python for managing contacts and notes.
 
 - Contacts:
   - add, remove, and list all contacts;
-  - search by name, email, phone, address, or birthday;
+  - search contacts by partial match in name, email, phone, address, or birthday;
   - add and edit email, address, birthday, and phone numbers;
   - find upcoming birthdays within the next N days.
 - Notes:
@@ -142,9 +142,9 @@ python -m py_compile main.py assistant/**/*.py
 ### Contacts
 
 - `contact all`
-- `contact add <name> <phone> [email] ["address"] [birthday]`
+- `contact add <name> <phone> [email] ["address"] [birthday]` optional fields must follow this exact order
 - `contact remove <name>`
-- `contact find <value>` for multi-word values use quotes
+- `contact find <value>` partial search across name, email, phone, address, and birthday; for multi-word values use quotes
 - `contact add_email <name> <email>`
 - `contact add_address <name> "address"`
 - `contact add_phone <name> <phone>`
@@ -163,16 +163,18 @@ python -m py_compile main.py assistant/**/*.py
 - `note edit <id> title="<value>" [content="<value>"]`
 - `note add_tag <id> <tag>`
 - `note remove_tag <id> <tag>`
-- `note find_by_tag <tag>`
+- `note find_by_tag <tag>` exact tag match
 - `note sort_by_tags`
 
 ### Quoting Rules
 
 - Use quotes for multi-word values such as addresses, note titles, note content, and search queries.
+- In `contact add`, optional values are positional: you cannot skip `email` and pass `address` directly in its place.
 - Single-word values can be entered without quotes.
 - Examples:
   - `contact add Ivan 0971234567 ivan@gmail.com "Kyiv, Khreshchatyk 1" 12-01-1995`
   - `contact find "Kyiv, Khreshchatyk 1"`
+  - `contact find 38099`
   - `note add "Weekly plan" "Prepare project demo" work`
   - `note find_text "project demo"`
 
@@ -187,6 +189,7 @@ contact edit Ivan phone +380501112233 +380501112244
 contact edit Ivan address "Kyiv, Saksahanskoho 25"
 contact find ivan@gmail.com
 contact find "Kyiv, Saksahanskoho 25"
+contact find 38099
 contact birthdays 30
 
 note add "Shopping" "Buy milk and bread" home urgent

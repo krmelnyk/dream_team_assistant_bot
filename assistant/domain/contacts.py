@@ -120,6 +120,10 @@ class ContactBook(UserDict):
     """A collection of contacts, indexed by name."""
 
     def add_contact(self, contact: Contact) -> None:
+        if contact.name in self.data:
+            raise ValidationError(
+                f"Contact with name '{contact.name}' already exists. Use edit commands to update it."
+                )   
         self.data[contact.name] = contact
 
     def remove_contact(self, name: str) -> None:

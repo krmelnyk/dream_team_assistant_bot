@@ -20,6 +20,17 @@ def test_create_contact_with_valid_phone():
     assert len(contact.phones) == 1
     assert contact.phones[0] == "+380991112233"
 
+def test_add_duplicate_contact_raises_validation_error():
+    book = ContactBook()
+    first = Contact("Anton")
+    first.set_phone("+380991112233")
+    second = Contact("Anton")
+    second.set_phone("+380671112233")
+
+    book.add_contact(first)
+
+    with pytest.raises(ValidationError):
+        book.add_contact(second)
 
 def test_invalid_phone_raises_validation_error():
     contact = Contact("Anton")

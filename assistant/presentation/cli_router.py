@@ -65,12 +65,12 @@ class CLI:
             ("contact all", "show all saved contacts"),
             (
                 'contact add <name> <phone> [email] ["address"] [birthday]',
-                "add a contact; wrap multi-word addresses in quotes",
+                "add a contact; optional fields go in order: email, address, birthday",
             ),
             ("contact remove <name>", "remove a contact by name"),
             (
                 'contact find <value>',
-                "find a contact; wrap multi-word values in quotes",
+                "find contacts by partial match; wrap multi-word values in quotes",
             ),
             ("contact add_email <name> <email>", "add or update a contact email"),
             (
