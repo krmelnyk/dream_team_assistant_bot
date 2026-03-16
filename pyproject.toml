@@ -22,6 +22,7 @@ dependencies = [
 personal-assistant = "main:main"
 
 [tool.setuptools]
+py-modules = ["main"]
 packages = [
     "assistant",
     "assistant.application",
